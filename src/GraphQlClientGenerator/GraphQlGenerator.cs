@@ -15,6 +15,8 @@ public class GraphQlGenerator
 
     private static readonly IDictionary<string, GraphQlType> _typesDictionary = new Dictionary<string, GraphQlType>();
 
+    private static readonly IDictionary<string, List<GraphQlType>> _implementingTypeToUnions = new Dictionary<string, List<GraphQlType>>();
+
     public const string RequiredNamespaces =
         $@"using System;
 using System.Collections;
@@ -106,6 +108,24 @@ using Newtonsoft.Json.Linq;
             foreach (var schemaType in schema.Types)
             {
                 _typesDictionary.Add(schemaType.Name, schemaType);
+            }
+
+            foreach (var unionType in _typesDictionary.Values.Where(t => t.Kind == GraphQlTypeKind.Union))
+            {
+                if (unionType.PossibleTypes != null)
+                {
+                    foreach (var unionImplementor in unionType.PossibleTypes)
+                    {
+                        if (_implementingTypeToUnions.ContainsKey(unionImplementor.Name) && _implementingTypeToUnions[unionImplementor.Name].All(t => t.Name != unionType.Name))
+                        {
+                            _implementingTypeToUnions[unionImplementor.Name].Add(_typesDictionary[unionType.Name]);
+                        }
+                        else
+                        {
+                            _implementingTypeToUnions[unionImplementor.Name] = new List<GraphQlType> { _typesDictionary[unionType.Name] };
+                        }
+                    }
+                }
             }
 
             return schema;
@@ -464,7 +484,7 @@ using Newtonsoft.Json.Linq;
         {
             var hasInputReference = context.ReferencedObjectTypes.Contains(complexType.Name);
             var fieldsToGenerate = GetFieldsToGenerate(complexType, complexTypes);
-            var isInterface = complexType.Kind == GraphQlTypeKind.Interface;
+            var isInterface = complexType.Kind == GraphQlTypeKind.Interface || complexType.Kind == GraphQlTypeKind.Union;
             var csharpTypeName = GetCSharpClassName(context, complexType.Name);
 
             void GenerateBody(bool isInterfaceMember)
@@ -529,12 +549,17 @@ using Newtonsoft.Json.Linq;
                             fieldsToGenerate.Add(interfaceField);
                 }
             }
+            if (_implementingTypeToUnions.ContainsKey(complexType.Name))
+                interfacesToImplement.AddRange(_implementingTypeToUnions[complexType.Name].Select(x => $"I{x.Name}{_configuration.ClassPrefix}"));
 
             if (hasInputReference)
                 interfacesToImplement.Add("IGraphQlInputObject");
 
             if (!isInterface)
+            {
                 GenerateDataClass(context, csharpTypeName, complexType, string.Join(", ", interfacesToImplement), () => GenerateBody(false));
+                context.Writer.WriteLine();
+            }
         }
 
         context.AfterDataClassesGeneration();
@@ -888,7 +913,7 @@ using Newtonsoft.Json.Linq;
             case GraphQlTypeKind.InputObject:
                 var fieldTypeName = GetCSharpClassName(context, fieldType.Name);
                 var propertyType = $"{_configuration.ClassPrefix}{fieldTypeName}{_configuration.ClassSuffix}";
-                if (fieldType.Kind == GraphQlTypeKind.Interface)
+                if (fieldType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union)
                     propertyType = $"I{propertyType}";
 
                 return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(propertyType));
@@ -1556,7 +1581,7 @@ using Newtonsoft.Json.Linq;
 
     private static void AppendArgumentDictionary(string indentation, TextWriter writer, ICollection<QueryBuilderParameterDefinition> argumentDefinitions, string argumentCollectionVariableName)
     {
-        if (argumentDefinitions.Count == 0)
+        if (argumentDefinitions ==  null || argumentDefinitions.Count == 0)
             return;
 
         writer.Write(indentation);
@@ -1753,7 +1778,7 @@ using Newtonsoft.Json.Linq;
 
     private bool IsUnknownObjectScalar(GraphQlType baseType, string valueName, GraphQlFieldType fieldType)
     {
-        if (fieldType.UnwrapIfNonNull().Kind != GraphQlTypeKind.Scalar)
+        if (fieldType.UnwrapIfNonNull()?.Kind != GraphQlTypeKind.Scalar)
             return false;
 
         var netType = ScalarToNetType(baseType, valueName, fieldType, baseType.AppliedDirectives).NetTypeName;
