@@ -5,7 +5,7 @@
     <Description>A simple strongly typed C# GraphQL client generator library</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Title>GraphQL C# Client Generator</Title>
     <PackageTags>GraphQL Client Generator</PackageTags>
     <PackageReleaseNotes>Allow nullable query parameters without specifying default value</PackageReleaseNotes>
