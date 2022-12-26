@@ -653,6 +653,7 @@ public abstract class GraphQlQueryBuilder : IGraphQlQueryBuilder
             {
                 builder.Append(separator);
                 builder.Append(fieldCriteria);
+                builder.Append(", typename: __typename");
             }
 
             separator = ",";
@@ -856,6 +857,12 @@ public abstract class GraphQlQueryBuilder<TQueryBuilder> : GraphQlQueryBuilder w
     public TQueryBuilder WithAllScalarFields()
     {
         IncludeFields(AllFields.Where(f => !f.IsComplex));
+        return (TQueryBuilder)this;
+    }
+
+    public TQueryBuilder WithAllGenericFieldTypes()
+    {
+        IncludeFields(AllFields.Where(f => f.QueryBuilderType == null));
         return (TQueryBuilder)this;
     }
 

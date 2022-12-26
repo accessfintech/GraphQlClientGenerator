@@ -13,6 +13,8 @@ public class GraphQlGenerator
 
     public const string PreprocessorDirectiveDisableNewtonsoftJson = "GRAPHQL_GENERATOR_DISABLE_NEWTONSOFT_JSON";
 
+    private static readonly IDictionary<string, GraphQlType> _typesDictionary = new Dictionary<string, GraphQlType>();
+
     public const string RequiredNamespaces =
         $@"using System;
 using System.Collections;
@@ -55,27 +57,30 @@ using Newtonsoft.Json.Linq;
 
     public static async Task<GraphQlSchema> RetrieveSchema(HttpMethod method, string url, IEnumerable<KeyValuePair<string, string>> headers = null)
     {
-        StringContent requestContent = null;
-        if (method == HttpMethod.Get)
-            url += $"?&query={IntrospectionQuery.Text}";
-        else
-            requestContent = new StringContent(JsonConvert.SerializeObject(new { query = IntrospectionQuery.Text }), Encoding.UTF8, "application/json");
+        const string IntrospectionOperation = "IntrospectionQuery";
 
-        using var request = new HttpRequestMessage(method, url) { Content = requestContent };
+        using var client = new HttpClient();
 
-        if (headers is not null)
-            foreach (var kvp in headers)
-                request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);
+        var value = new { operationName = IntrospectionOperation, query = IntrospectionQuery.Text };
+        var serializeObject = JsonConvert.SerializeObject(value);
+        var stringContent = new StringContent(serializeObject, Encoding.UTF8, "application/json");
 
-        using var response = await HttpClient.SendAsync(request);
 
-        var content =
-            response.Content is null
-                ? "(no content)"
-                : await response.Content.ReadAsStringAsync();
+        var httpResponseMessage = await client.PostAsync(
+                                      url,
+                                      stringContent);
+        string content;
+        using (var response =
+               httpResponseMessage)
+        {
+            content =
+                response.Content == null
+                    ? "(no content)"
+                    : await response.Content.ReadAsStringAsync();
 
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}){Environment.NewLine}content:{Environment.NewLine}{content}");
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}); content: {content}");
+        }
 
         return DeserializeGraphQlSchema(content);
     }
@@ -84,12 +89,24 @@ using Newtonsoft.Json.Linq;
     {
         try
         {
+
+            var graphQlResult = JsonConvert.DeserializeObject<GraphQlResult>(content, SerializerSettings);
             var schema =
-                JsonConvert.DeserializeObject<GraphQlResult>(content, SerializerSettings)?.Data?.Schema
+                graphQlResult?.Data?.Schema
                 ?? JsonConvert.DeserializeObject<GraphQlData>(content, SerializerSettings)?.Schema;
+
+            if (graphQlResult != null && graphQlResult.Errors?.Any() == true)
+            {
+                throw new InvalidOperationException($"Errors from introspection query:{Environment.NewLine}{string.Join(Environment.NewLine, graphQlResult.Errors.Select(e => e.Message))}");
+            }
 
             if (schema is null)
                 throw new ArgumentException("not a GraphQL schema", nameof(content));
+
+            foreach (var schemaType in schema.Types)
+            {
+                _typesDictionary.Add(schemaType.Name, schemaType);
+            }
 
             return schema;
         }
@@ -181,7 +198,7 @@ using Newtonsoft.Json.Linq;
             else
                 continue;
 
-            var candidateClassName = NamingHelper.ToPascalCase(graphQlType.Name);;
+            var candidateClassName = NamingHelper.ToPascalCase(graphQlType.Name); ;
             var finalClassName = candidateClassName;
             var collisionIteration = 1;
 
@@ -477,16 +494,18 @@ using Newtonsoft.Json.Linq;
 
                     foreach (var field in fieldsToGenerate)
                         GenerateDataProperty(
-                            complexType,
-                            field,
-                            NamingHelper.ToPascalCase(field.Name),
-                            isInterfaceMember,
-                            field.IsDeprecated,
-                            field.DeprecationReason,
-                            true,
-                            (_, backingFieldName) =>
-                                writer.Write(generateBackingFields ? _configuration.PropertyAccessorBodyWriter(backingFieldName, GetDataPropertyType(context, complexType, field)) : " { get; set; }"),
-                            context);
+                            baseType: complexType,
+                            member: field,
+                            propertyName: NamingHelper.ToPascalCase(field.Name),
+                            isInterfaceMember: isInterfaceMember,
+                            isDeprecated: field.IsDeprecated,
+                            deprecationReason: field.DeprecationReason,
+                            decorateWithJsonPropertyAttribute: true,
+                            writeBody: (_, backingFieldName) =>
+                                writer.Write(generateBackingFields
+                                                 ? _configuration.PropertyAccessorBodyWriter(backingFieldName, GetDataPropertyType(context, complexType, field))
+                                                 : " { get; set; }"),
+                            context: context);
                 }
             }
 
@@ -572,14 +591,14 @@ using Newtonsoft.Json.Linq;
 
         foreach (var kvp in fieldNameMembers)
             GenerateDataProperty(
-                type,
-                kvp.Value.Member,
-                NamingHelper.ToPascalCase(kvp.Value.Member.Name) + kvp.Value.NameExtension,
-                false,
-                false,
-                null,
-                true,
-                (t, _) =>
+                baseType: type,
+                member: kvp.Value.Member,
+                propertyName: NamingHelper.ToPascalCase(kvp.Value.Member.Name) + kvp.Value.NameExtension,
+                isInterfaceMember: false,
+                isDeprecated: false,
+                deprecationReason: null,
+                decorateWithJsonPropertyAttribute: true,
+                writeBody: (t, _) =>
                 {
                     writer.WriteLine();
                     writer.Write(indentation);
@@ -622,7 +641,7 @@ using Newtonsoft.Json.Linq;
                     writer.Write(indentation);
                     writer.WriteLine("    }");
                 },
-                context);
+                context: context);
 
         writer.Write(indentation);
         writer.WriteLine("    IEnumerable<InputPropertyInfo> IGraphQlInputObject.GetPropertyValues()");
@@ -673,7 +692,7 @@ using Newtonsoft.Json.Linq;
             writer.Write(graphQlType.Name);
             writer.WriteLine("\")]");
         }
-            
+
         writer.Write(indentation);
         writer.Write(GetMemberAccessibility());
         writer.Write(" ");
@@ -890,7 +909,7 @@ using Newtonsoft.Json.Linq;
                         ? "object"
                         : $"{(unwrappedItemType.Kind == GraphQlTypeKind.Interface ? "I" : null)}{_configuration.ClassPrefix}{itemTypeName}{_configuration.ClassSuffix}";
 
-                var suggestedScalarNetType = ScalarToNetType(baseType, member.Name, itemType).NetTypeName.TrimEnd('?');
+                var suggestedScalarNetType = ScalarToNetType(baseType, member.Name, itemType, baseType.AppliedDirectives).NetTypeName.TrimEnd('?');
                 if (!String.Equals(suggestedScalarNetType, "object") && !String.Equals(suggestedScalarNetType, "object?") &&
                     !suggestedScalarNetType.TrimEnd().EndsWith("System.Object") && !suggestedScalarNetType.TrimEnd().EndsWith("System.Object?"))
                     netItemType = suggestedScalarNetType;
@@ -912,14 +931,20 @@ using Newtonsoft.Json.Linq;
     private ScalarFieldTypeDescription GetScalarNetType(string scalarTypeName, GraphQlType baseType, IGraphQlMember member) =>
         scalarTypeName
             switch
-            {
-                GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, member.Type, member.Name),
-                GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
-                GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
-                GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, member.Type, member.Name)),
-                GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, member.Type, member.Name),
-                _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
-            };
+        {
+            GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, member.Type, member.Name),
+            GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
+            GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
+            GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, member.Type, member.Name)),
+            GraphQlTypeBase.GraphQlTypeScalarId => ConvertToTypeDescription(GetClrDirectiveValue(member.AppliedDirectives) ?? "dynamic"),
+            GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, member.Type, member.Name),
+            _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
+        };
+
+    private ScalarFieldTypeDescription GetJsonScalarNetType(GraphQlType baseType, GraphQlFieldType memberType, string valueName)
+    {
+        return new ScalarFieldTypeDescription { NetTypeName = "JObject" };
+    }
 
     private string GetBooleanNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.BooleanTypeMapping switch
@@ -948,6 +973,12 @@ using Newtonsoft.Json.Linq;
             IntegerTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName),
             _ => throw new InvalidOperationException($"'{_configuration.IntegerTypeMapping}' not supported")
         };
+
+    private static string GetClrDirectiveValue(IEnumerable<AppliedDirective> directives)
+    {
+        var clrDirective = directives?.SingleOrDefault(d => d.Name == "clrType");
+        return clrDirective?.Args.FirstOrDefault(a => a.Name == "type")?.Value.Trim('"');
+    }
 
     private ScalarFieldTypeDescription GetIdNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.IdTypeMapping switch
@@ -1053,7 +1084,7 @@ using Newtonsoft.Json.Linq;
                             throw FieldTypeResolutionFailedException(type.Name, field.Name, null);
 
                         fieldTypeName = GetCSharpMemberName(fieldTypeName);
-                            
+
                         writer.Write($", QueryBuilderType = typeof({_configuration.ClassPrefix}{fieldTypeName}QueryBuilder{_configuration.ClassSuffix})");
                     }
                 }
@@ -1125,7 +1156,7 @@ using Newtonsoft.Json.Linq;
             var fieldType = field.Type.UnwrapIfNonNull();
             if (fieldType.Kind == GraphQlTypeKind.List)
                 fieldType = fieldType.OfType;
-                
+
             fieldType = fieldType.UnwrapIfNonNull();
             var isFragment = i >= firstFragmentIndex;
             var argumentDefinitions = ResolveParameterDefinitions(context, type, field.Args);
@@ -1184,9 +1215,9 @@ using Newtonsoft.Json.Linq;
                     writer.Write(", ");
 
                 WriteAliasParameter();
-                    
+
                 var fieldDirectiveParameterNameList = WriteDirectiveParameterList(schema, argumentDefinitions, GraphQlDirectiveLocation.Field, writer);
-                    
+
                 writer.Write(")");
 
                 WriteQueryBuilderMethodBody(
@@ -1479,10 +1510,10 @@ using Newtonsoft.Json.Linq;
         var argumentTypeDescription =
             unwrappedType.Kind == GraphQlTypeKind.Enum
                 ? ConvertToTypeDescription($"{_configuration.ClassPrefix}{NamingHelper.ToPascalCase(unwrappedType.Name)}{_configuration.ClassSuffix}?")
-                : ScalarToNetType(baseType, argument.Name, argumentType);
-            
+                : ScalarToNetType(baseType, argument.Name, argumentType, argument.AppliedDirectives);
+
         var argumentNetType = argumentTypeDescription.NetTypeName;
-            
+
         if (isTypeNotNull)
             argumentNetType = argumentNetType.TrimEnd('?');
 
@@ -1491,7 +1522,7 @@ using Newtonsoft.Json.Linq;
         {
             argumentNetType = GetCSharpClassName(context, unwrappedType.Name);
             argumentNetType = $"{_configuration.ClassPrefix}{argumentNetType}{_configuration.ClassSuffix}";
-                
+
             if (!isTypeNotNull)
                 argumentNetType = AddQuestionMarkIfNullableReferencesEnabled(argumentNetType);
         }
@@ -1575,9 +1606,9 @@ using Newtonsoft.Json.Linq;
     private void GenerateEnum(GenerationContext context, GraphQlType type)
     {
         var enumName = _configuration.ClassPrefix + NamingHelper.ToPascalCase(type.Name) + _configuration.ClassSuffix;
-            
+
         context.BeforeEnumGeneration(enumName);
-            
+
         var writer = context.Writer;
 
         GenerateCodeComments(writer, type.Description, context.Indentation);
@@ -1723,18 +1754,19 @@ using Newtonsoft.Json.Linq;
         if (fieldType.UnwrapIfNonNull().Kind != GraphQlTypeKind.Scalar)
             return false;
 
-        var netType = ScalarToNetType(baseType, valueName, fieldType).NetTypeName;
+        var netType = ScalarToNetType(baseType, valueName, fieldType, baseType.AppliedDirectives).NetTypeName;
         return netType == "object" || netType.TrimEnd().EndsWith("System.Object") || netType == "object?" || netType.TrimEnd().EndsWith("System.Object?");
     }
 
-    private ScalarFieldTypeDescription ScalarToNetType(GraphQlType baseType, string valueName, GraphQlFieldType valueType) =>
+    private ScalarFieldTypeDescription ScalarToNetType(GraphQlType baseType, string valueName, GraphQlFieldType valueType, ICollection<AppliedDirective> appliedDirectives) =>
         valueType.UnwrapIfNonNull().Name switch
         {
             GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, valueType, valueName)),
-            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, valueType, valueName),
+            GraphQlTypeBase.GraphQlTypeScalarId => ConvertToTypeDescription(GetClrDirectiveValue(appliedDirectives) ?? "dynamic"),
+            GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, valueType, valueName),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
         };
 
