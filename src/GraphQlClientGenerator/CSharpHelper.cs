@@ -44,7 +44,7 @@ public static class CSharpHelper
 
     public static bool IsValidNamespace(string @namespace)
     {
-        if (String.IsNullOrWhiteSpace(@namespace))
+        if (string.IsNullOrWhiteSpace(@namespace))
             return false;
 
         var namespaceElements = @namespace.Split('.');

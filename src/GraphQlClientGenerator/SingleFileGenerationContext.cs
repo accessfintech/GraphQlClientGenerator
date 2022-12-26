@@ -16,7 +16,7 @@ public class SingleFileGenerationContext : GenerationContext
         : base(schema, objectTypes, indentationSize)
     {
         Writer = writer ?? throw new ArgumentNullException(nameof(writer));
-        _indentation = new String(' ', indentationSize);
+        _indentation = new string(' ', indentationSize);
     }
 
     public override void BeforeGeneration(GraphQlGeneratorConfiguration configuration)

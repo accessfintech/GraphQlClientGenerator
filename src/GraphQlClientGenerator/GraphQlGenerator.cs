@@ -126,7 +126,7 @@ using Newtonsoft.Json.Linq;
 
     public void WriteFullClientCSharpFile(GraphQlSchema schema, string @namespace, TextWriter writer)
     {
-        if (String.IsNullOrWhiteSpace(@namespace))
+        if (string.IsNullOrWhiteSpace(@namespace))
             throw new ArgumentException("namespace required", nameof(@namespace));
 
         if (!CSharpHelper.IsValidNamespace(@namespace))
@@ -534,7 +534,7 @@ using Newtonsoft.Json.Linq;
                 interfacesToImplement.Add("IGraphQlInputObject");
 
             if (!isInterface)
-                GenerateDataClass(context, csharpTypeName, complexType, String.Join(", ", interfacesToImplement), () => GenerateBody(false));
+                GenerateDataClass(context, csharpTypeName, complexType, string.Join(", ", interfacesToImplement), () => GenerateBody(false));
         }
 
         context.AfterDataClassesGeneration();
@@ -625,7 +625,7 @@ using Newtonsoft.Json.Linq;
                     writer.Write(kvp.Value.Member.Name);
                     writer.Write("\", Value = value");
 
-                    if (!String.IsNullOrEmpty(t.FormatMask))
+                    if (!string.IsNullOrEmpty(t.FormatMask))
                     {
                         writer.Write(", FormatMask = \"");
                         writer.Write(t.FormatMask.Replace("\"", "\\\""));
@@ -704,7 +704,7 @@ using Newtonsoft.Json.Linq;
         writer.Write(" ");
         writer.Write(typeName);
 
-        if (!String.IsNullOrEmpty(baseTypeName))
+        if (!string.IsNullOrEmpty(baseTypeName))
         {
             writer.Write(" : ");
             writer.Write(baseTypeName);
@@ -808,7 +808,7 @@ using Newtonsoft.Json.Linq;
 
         if (isDeprecated)
         {
-            deprecationReason = String.IsNullOrWhiteSpace(deprecationReason) ? null : $"(@\"{deprecationReason.Replace("\"", "\"\"")}\")";
+            deprecationReason = string.IsNullOrWhiteSpace(deprecationReason) ? null : $"(@\"{deprecationReason.Replace("\"", "\"\"")}\")";
             writer.Write(indentation);
             writer.WriteLine($"    [Obsolete{deprecationReason}]");
         }
@@ -817,7 +817,7 @@ using Newtonsoft.Json.Linq;
         {
             decorateWithJsonPropertyAttribute =
                 _configuration.JsonPropertyGeneration == JsonPropertyGenerationOption.Always ||
-                !String.Equals(
+                !string.Equals(
                     member.Name,
                     propertyName.TrimStart('@'),
                     _configuration.JsonPropertyGeneration == JsonPropertyGenerationOption.CaseInsensitive ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
@@ -910,14 +910,14 @@ using Newtonsoft.Json.Linq;
                         : $"{(unwrappedItemType.Kind == GraphQlTypeKind.Interface ? "I" : null)}{_configuration.ClassPrefix}{itemTypeName}{_configuration.ClassSuffix}";
 
                 var suggestedScalarNetType = ScalarToNetType(baseType, member.Name, itemType, baseType.AppliedDirectives).NetTypeName.TrimEnd('?');
-                if (!String.Equals(suggestedScalarNetType, "object") && !String.Equals(suggestedScalarNetType, "object?") &&
+                if (!string.Equals(suggestedScalarNetType, "object") && !string.Equals(suggestedScalarNetType, "object?") &&
                     !suggestedScalarNetType.TrimEnd().EndsWith("System.Object") && !suggestedScalarNetType.TrimEnd().EndsWith("System.Object?"))
                     netItemType = suggestedScalarNetType;
 
                 if (itemType.Kind != GraphQlTypeKind.NonNull)
                     netItemType = AddQuestionMarkIfNullableReferencesEnabled(netItemType);
 
-                var netCollectionType = String.Format(netCollectionOpenType, netItemType);
+                var netCollectionType = string.Format(netCollectionOpenType, netItemType);
                 return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType));
 
             case GraphQlTypeKind.Scalar:
@@ -1060,7 +1060,7 @@ using Newtonsoft.Json.Linq;
                 writer.Write('"');
 
                 var csharpPropertyName = NamingHelper.ToPascalCase(field.Name);
-                if (_configuration.JsonPropertyGeneration == JsonPropertyGenerationOption.UseDefaultAlias && !String.Equals(field.Name, csharpPropertyName, StringComparison.OrdinalIgnoreCase))
+                if (_configuration.JsonPropertyGeneration == JsonPropertyGenerationOption.UseDefaultAlias && !string.Equals(field.Name, csharpPropertyName, StringComparison.OrdinalIgnoreCase))
                 {
                     writer.Write(", DefaultAlias = \"");
                     writer.Write(NamingHelper.LowerFirst(csharpPropertyName));
@@ -1113,7 +1113,9 @@ using Newtonsoft.Json.Linq;
 
         WriteOverrideProperty("public", "IReadOnlyList<GraphQlFieldMetadata>", "AllFields", "AllFieldMetadata", indentation, writer);
 
-        string ReturnPrefix(bool requiresFullBody) => requiresFullBody ? indentation + "        return " : String.Empty;
+        writer.WriteLine();
+
+        string ReturnPrefix(bool requiresFullBody) => requiresFullBody ? indentation + "        return " : string.Empty;
 
         var useCompatibleSyntax = _configuration.CSharpVersion == CSharpVersion.Compatible;
         var stringDataType = AddQuestionMarkIfNullableReferencesEnabled("string");
@@ -1176,7 +1178,7 @@ using Newtonsoft.Json.Linq;
                 }
 
             var methodParameters =
-                String.Join(
+                string.Join(
                     ", ",
                     argumentDefinitions
                         .OrderByDescending(d => d.Argument.Type.Kind == GraphQlTypeKind.NonNull)
@@ -1191,7 +1193,7 @@ using Newtonsoft.Json.Linq;
                 writer.Write(stringDataType);
                 writer.Write(" alias = ");
 
-                if (_configuration.JsonPropertyGeneration == JsonPropertyGenerationOption.UseDefaultAlias && !String.Equals(field.Name, csharpPropertyName, StringComparison.OrdinalIgnoreCase))
+                if (_configuration.JsonPropertyGeneration == JsonPropertyGenerationOption.UseDefaultAlias && !string.Equals(field.Name, csharpPropertyName, StringComparison.OrdinalIgnoreCase))
                 {
                     writer.Write('"');
                     writer.Write(NamingHelper.LowerFirst(csharpPropertyName));
@@ -1211,7 +1213,7 @@ using Newtonsoft.Json.Linq;
                 writer.Write("(");
                 writer.Write(methodParameters);
 
-                if (!String.IsNullOrEmpty(methodParameters))
+                if (!string.IsNullOrEmpty(methodParameters))
                     writer.Write(", ");
 
                 WriteAliasParameter();
@@ -1246,7 +1248,7 @@ using Newtonsoft.Json.Linq;
             else
             {
                 var fieldTypeName = fieldType.Name;
-                if (String.IsNullOrEmpty(fieldTypeName))
+                if (string.IsNullOrEmpty(fieldTypeName))
                     throw FieldTypeResolutionFailedException(type.Name, field.Name, null);
 
                 fieldTypeName = GetCSharpMemberName(fieldTypeName);
@@ -1370,7 +1372,7 @@ using Newtonsoft.Json.Linq;
     {
         var levels = 0;
 
-        var nullableSymbols = new List<string> { String.Empty };
+        var nullableSymbols = new List<string> { string.Empty };
 
         while (true)
         {
@@ -1389,7 +1391,7 @@ using Newtonsoft.Json.Linq;
                 break;
             }
 
-            nullableSymbols.Add(type.OfType.Kind == GraphQlTypeKind.NonNull ? String.Empty : AddQuestionMarkIfNullableReferencesEnabled(String.Empty));
+            nullableSymbols.Add(type.OfType.Kind == GraphQlTypeKind.NonNull ? string.Empty : AddQuestionMarkIfNullableReferencesEnabled(string.Empty));
             type = unwrappedType;
         }
 
@@ -1398,7 +1400,7 @@ using Newtonsoft.Json.Linq;
         netCollectionOpenType =
             levels == 1
                 ? "ICollection<{0}>"
-                : String.Concat(Enumerable.Repeat("IList<", levels).Concat(new[] { "{0}" }).Concat(nullableSymbols.Select(s => ">" + s)));
+                : string.Concat(Enumerable.Repeat("IList<", levels).Concat(new[] { "{0}" }).Concat(nullableSymbols.Select(s => ">" + s)));
 
         return type;
     }
@@ -1442,7 +1444,7 @@ using Newtonsoft.Json.Linq;
 
         return
             directiveParameterNames.Any()
-                ? $"new {AddQuestionMarkIfNullableReferencesEnabled("GraphQlDirective")}[] {{ {String.Join(", ", directiveParameterNames)} }}"
+                ? $"new {AddQuestionMarkIfNullableReferencesEnabled("GraphQlDirective")}[] {{ {string.Join(", ", directiveParameterNames)} }}"
                 : "null";
     }
 
@@ -1571,7 +1573,7 @@ using Newtonsoft.Json.Linq;
             writer.Write("\", ArgumentValue = ");
             writer.Write(argumentDefinition.NetParameterName);
 
-            if (!String.IsNullOrEmpty(argumentDefinition.FormatMask))
+            if (!string.IsNullOrEmpty(argumentDefinition.FormatMask))
             {
                 writer.Write(", FormatMask = \"");
                 writer.Write(argumentDefinition.FormatMask.Replace("\"", "\\\""));
@@ -1687,7 +1689,7 @@ using Newtonsoft.Json.Linq;
         GenerateCodeComments(writer, directive.Description, context.Indentation);
 
         var orderedArgumentDefinitions = ResolveParameterDefinitions(context, null, directive.Args.OrderByDescending(a => a.Type.Kind == GraphQlTypeKind.NonNull));
-        var argumentList = String.Join(", ", orderedArgumentDefinitions.Select(d => d.NetParameterDefinitionClause));
+        var argumentList = string.Join(", ", orderedArgumentDefinitions.Select(d => d.NetParameterDefinitionClause));
 
         var indentation = GetIndentation(context.Indentation);
         writer.Write(indentation);
@@ -1727,7 +1729,7 @@ using Newtonsoft.Json.Linq;
 
     private void GenerateCodeComments(TextWriter writer, string description, int indentationSize)
     {
-        if (String.IsNullOrWhiteSpace(description))
+        if (string.IsNullOrWhiteSpace(description))
             return;
 
         var indentation = GetIndentation(indentationSize);
@@ -1737,7 +1739,7 @@ using Newtonsoft.Json.Linq;
             writer.Write(indentation);
             writer.WriteLine("/// <summary>");
             writer.Write(indentation);
-            writer.WriteLine("/// " + String.Join(Environment.NewLine + indentation + "/// ", description.Split('\n').Select(l => l.Trim())));
+            writer.WriteLine("/// " + string.Join(Environment.NewLine + indentation + "/// ", description.Split('\n').Select(l => l.Trim())));
             writer.Write(indentation);
             writer.WriteLine("/// </summary>");
         }
@@ -1776,10 +1778,10 @@ using Newtonsoft.Json.Linq;
             throw new InvalidOperationException($"'{nameof(_configuration.ScalarFieldTypeMappingProvider)}' missing");
 
         var typeDescription = _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName);
-        if (String.IsNullOrWhiteSpace(typeDescription.NetTypeName))
+        if (string.IsNullOrWhiteSpace(typeDescription.NetTypeName))
             throw new InvalidOperationException($".NET type for '{baseType.Name}.{valueName}' ({valueType.Name}) cannot be resolved. Please check {nameof(_configuration)}.{nameof(_configuration.ScalarFieldTypeMappingProvider)} implementation. ");
 
-        if (typeDescription.FormatMask is not null && String.IsNullOrWhiteSpace(typeDescription.FormatMask))
+        if (typeDescription.FormatMask is not null && string.IsNullOrWhiteSpace(typeDescription.FormatMask))
             throw new InvalidOperationException("invalid format mask");
 
         return typeDescription;

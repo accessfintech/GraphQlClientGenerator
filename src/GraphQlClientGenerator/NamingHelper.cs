@@ -88,7 +88,7 @@ internal static class NamingHelper
             "while",
         };
 
-    public static string LowerFirst(string value) => Char.ToLowerInvariant(value[0]) + value.Substring(1);
+    public static string LowerFirst(string value) => char.ToLowerInvariant(value[0]) + value.Substring(1);
 
     public static string ToValidCSharpName(string name) => CSharpKeywords.Contains(name) ? $"@{name}" : name;
 
@@ -103,14 +103,14 @@ internal static class NamingHelper
     /// <remarks>https://stackoverflow.com/questions/18627112/how-can-i-convert-text-to-pascal-case</remarks>>
     public static string ToPascalCase(string text)
     {
-        var textWithoutWhiteSpace = RegexInvalidCharacters.Replace(RegexWhiteSpace.Replace(text, String.Empty), String.Empty);
+        var textWithoutWhiteSpace = RegexInvalidCharacters.Replace(RegexWhiteSpace.Replace(text, string.Empty), string.Empty);
         if (textWithoutWhiteSpace.All(c => c == '_'))
             return textWithoutWhiteSpace;
             
         var pascalCase =
             RegexInvalidCharacters
                 // Replaces white spaces with underscore, then replace all invalid chars with an empty string.
-                .Replace(RegexNextWhiteSpace.Replace(text, "_"), String.Empty)
+                .Replace(RegexNextWhiteSpace.Replace(text, "_"), string.Empty)
                 .Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(w => RegexUpperCaseFirstLetter.Replace(w, m => m.Value.ToUpper()))
                 // Replace second and all following upper case letters to lower if there is no next lower (ABC -> Abc).
@@ -120,7 +120,7 @@ internal static class NamingHelper
                 // Lower second and next upper case letters except the last if it follows by any lower (ABcDEf -> AbcDef).
                 .Select(w => RegexUpperCaseInside.Replace(w, m => m.Value.ToLower()));
 
-        return String.Concat(pascalCase);
+        return string.Concat(pascalCase);
     }
 
     public static string ToCSharpEnumName(string name)
@@ -137,12 +137,12 @@ internal static class NamingHelper
                 continue;
             }
 
-            hasLowerLetters |= Char.IsLower(@char);
-            hasUpperLetters |= Char.IsUpper(@char);
+            hasLowerLetters |= char.IsLower(@char);
+            hasUpperLetters |= char.IsUpper(@char);
 
-            builder.Append(startNewWord ? Char.ToUpper(@char) : Char.ToLower(@char));
+            builder.Append(startNewWord ? char.ToUpper(@char) : char.ToLower(@char));
 
-            startNewWord = Char.IsDigit(@char);
+            startNewWord = char.IsDigit(@char);
         }
 
         return hasLowerLetters && hasUpperLetters ? name : builder.ToString();
