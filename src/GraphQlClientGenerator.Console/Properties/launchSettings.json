@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "GraphQlClientGenerator.Console": {
+      "commandName": "Project",
+      "commandLineArgs": "--serviceUrl http://localhost:3999/graphql --outputPath C:\\AF\\automation\\AccessFintech.Automation\\AccessFintech.Automation.Framework\\GraphQL\\GeneratedGraphqlClient\\GeneratedGraphqlClient.cs --enumValueNaming Original --namespace AccessFintech.Automation.Framework.GraphQL.GeneratedGraphqlClient"
+    }
+  }
+}

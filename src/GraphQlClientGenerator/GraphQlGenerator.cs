@@ -484,7 +484,7 @@ using Newtonsoft.Json.Linq;
         {
             var hasInputReference = context.ReferencedObjectTypes.Contains(complexType.Name);
             var fieldsToGenerate = GetFieldsToGenerate(complexType, complexTypes);
-            var isInterface = complexType.Kind == GraphQlTypeKind.Interface || complexType.Kind == GraphQlTypeKind.Union;
+            var isInterface = complexType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union;
             var csharpTypeName = GetCSharpClassName(context, complexType.Name);
 
             void GenerateBody(bool isInterfaceMember)
@@ -961,10 +961,25 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, member.Type, member.Name)),
-            GraphQlTypeBase.GraphQlTypeScalarId => ConvertToTypeDescription(GetClrDirectiveValue(member.AppliedDirectives) ?? "dynamic"),
+            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, member.Type, member.Name, member.AppliedDirectives),
             GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, member.Type, member.Name),
             _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
         };
+
+    private ScalarFieldTypeDescription GetIdNetTypeWrapper(GraphQlType baseType, GraphQlFieldType memberType, string memberName, ICollection<AppliedDirective> memberAppliedDirectives)
+    {
+        ScalarFieldTypeDescription description;
+        if (memberAppliedDirectives!=null && memberAppliedDirectives.Any())
+        {
+            description = ConvertToTypeDescription(GetClrDirectiveValue(memberAppliedDirectives) ?? "dynamic");
+        }
+        else
+        {
+            description = GetIdNetType(baseType, memberType, memberName);
+        }
+
+        return description;
+    }
 
     private ScalarFieldTypeDescription GetJsonScalarNetType(GraphQlType baseType, GraphQlFieldType memberType, string valueName)
     {
@@ -1077,7 +1092,7 @@ using Newtonsoft.Json.Linq;
                 var fieldType = field.Type.UnwrapIfNonNull();
                 var isList = fieldType.Kind == GraphQlTypeKind.List;
                 var treatUnknownObjectAsComplex = IsUnknownObjectScalar(type, field.Name, fieldType) && !_configuration.TreatUnknownObjectAsScalar;
-                var isComplex = isList || treatUnknownObjectAsComplex || IsComplexType(fieldType.Kind);
+                var isComplex = isList || treatUnknownObjectAsComplex || IsComplexType(fieldType.Kind) || field.Args?.Any() == true;
 
                 writer.Write(fieldMetadataIndentation);
                 writer.Write("        new GraphQlFieldMetadata { Name = \"");
@@ -1792,7 +1807,7 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, valueType, valueName)),
-            GraphQlTypeBase.GraphQlTypeScalarId => ConvertToTypeDescription(GetClrDirectiveValue(appliedDirectives) ?? "dynamic"),
+            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, valueType, valueName, appliedDirectives),
             GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, valueType, valueName),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
         };
