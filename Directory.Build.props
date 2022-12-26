@@ -3,13 +3,13 @@
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Copyright>Copyright 2017-2022</Copyright>
-    <Authors>Husqvik</Authors>
-    <Company>Tibber</Company>
+    <Authors>Artur Gordashnikov, Sharon Reytan, Yonatan Gross</Authors>
+    <Company>AccessFintech</Company>
     <VersionPrefix>0.9.14</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Husqvik/GraphQlClientGenerator</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/accessfintech/GraphQlClientGenerator</PackageProjectUrl>
     <PackageIcon>GraphQlLogo.png</PackageIcon>
-    <RepositoryUrl>https://github.com/Husqvik/GraphQlClientGenerator</RepositoryUrl>
+    <RepositoryUrl>https://github.com/accessfintech/GraphQlClientGenerator</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
