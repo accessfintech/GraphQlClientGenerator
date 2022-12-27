@@ -6,7 +6,13 @@ namespace GraphQlClientGenerator;
 
 public class GraphQlResult
 {
+    public ICollection<GraphQlError> Errors { get; set; }
     public GraphQlData Data { get; set; }
+}
+
+public class GraphQlError
+{
+    public string Message { get; set; }
 }
 
 public class GraphQlData
@@ -91,6 +97,8 @@ public abstract class GraphQlTypeBase
     public const string GraphQlTypeScalarId = "ID";
     public const string GraphQlTypeScalarInteger = "Int";
     public const string GraphQlTypeScalarString = "String";
+    public const string GraphQlTypeScalarJson = "Json";
+
 
     internal static readonly ICollection<string> AllBuiltInScalarTypeNames =
         new HashSet<string>
@@ -99,7 +107,8 @@ public abstract class GraphQlTypeBase
             GraphQlTypeScalarFloat,
             GraphQlTypeScalarId,
             GraphQlTypeScalarInteger,
-            GraphQlTypeScalarString
+            GraphQlTypeScalarString,
+            GraphQlTypeScalarJson
         };
 
     public GraphQlTypeKind Kind { get; set; }

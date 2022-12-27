@@ -13,6 +13,8 @@ public class GraphQlGenerator
 
     public const string PreprocessorDirectiveDisableNewtonsoftJson = "GRAPHQL_GENERATOR_DISABLE_NEWTONSOFT_JSON";
 
+    private static readonly IDictionary<string, GraphQlType> _typesDictionary = new Dictionary<string, GraphQlType>();
+
     public const string RequiredNamespaces =
         $@"using System;
 using System.Collections;
@@ -55,27 +57,30 @@ using Newtonsoft.Json.Linq;
 
     public static async Task<GraphQlSchema> RetrieveSchema(HttpMethod method, string url, IEnumerable<KeyValuePair<string, string>> headers = null)
     {
-        StringContent requestContent = null;
-        if (method == HttpMethod.Get)
-            url += $"?&query={IntrospectionQuery.Text}";
-        else
-            requestContent = new StringContent(JsonConvert.SerializeObject(new { query = IntrospectionQuery.Text }), Encoding.UTF8, "application/json");
+        const string IntrospectionOperation = "IntrospectionQuery";
 
-        using var request = new HttpRequestMessage(method, url) { Content = requestContent };
+        using var client = new HttpClient();
 
-        if (headers is not null)
-            foreach (var kvp in headers)
-                request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);
+        var value = new { operationName = IntrospectionOperation, query = IntrospectionQuery.Text };
+        var serializeObject = JsonConvert.SerializeObject(value);
+        var stringContent = new StringContent(serializeObject, Encoding.UTF8, "application/json");
 
-        using var response = await HttpClient.SendAsync(request);
 
-        var content =
-            response.Content is null
-                ? "(no content)"
-                : await response.Content.ReadAsStringAsync();
+        var httpResponseMessage = await client.PostAsync(
+                                      url,
+                                      stringContent);
+        string content;
+        using (var response =
+               httpResponseMessage)
+        {
+            content =
+                response.Content == null
+                    ? "(no content)"
+                    : await response.Content.ReadAsStringAsync();
 
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}){Environment.NewLine}content:{Environment.NewLine}{content}");
+            if (!response.IsSuccessStatusCode)
+                throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}); content: {content}");
+        }
 
         return DeserializeGraphQlSchema(content);
     }
@@ -84,12 +89,24 @@ using Newtonsoft.Json.Linq;
     {
         try
         {
+
+            var graphQlResult = JsonConvert.DeserializeObject<GraphQlResult>(content, SerializerSettings);
             var schema =
-                JsonConvert.DeserializeObject<GraphQlResult>(content, SerializerSettings)?.Data?.Schema
+                graphQlResult?.Data?.Schema
                 ?? JsonConvert.DeserializeObject<GraphQlData>(content, SerializerSettings)?.Schema;
+
+            if (graphQlResult != null && graphQlResult.Errors?.Any() == true)
+            {
+                throw new InvalidOperationException($"Errors from introspection query:{Environment.NewLine}{string.Join(Environment.NewLine, graphQlResult.Errors.Select(e => e.Message))}");
+            }
 
             if (schema is null)
                 throw new ArgumentException("not a GraphQL schema", nameof(content));
+
+            foreach (var schemaType in schema.Types)
+            {
+                _typesDictionary.Add(schemaType.Name, schemaType);
+            }
 
             return schema;
         }
@@ -961,6 +978,11 @@ using Newtonsoft.Json.Linq;
             _ => throw new InvalidOperationException($"'{_configuration.IdTypeMapping}' not supported")
         };
 
+    private ScalarFieldTypeDescription GetJsonScalarNetType(GraphQlType baseType, GraphQlFieldType memberType, string valueName)
+    {
+        return ConvertToTypeDescription("JObject");
+    }
+
     private static InvalidOperationException ListItemTypeResolutionFailedException(string typeName, string fieldName) =>
         FieldTypeResolutionFailedException(typeName, fieldName, "list item type was not resolved; nested collections too deep");
 
@@ -1737,6 +1759,7 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, valueType, valueName)),
             GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, valueType, valueName),
+            GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, valueType, valueName),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
         };
 
