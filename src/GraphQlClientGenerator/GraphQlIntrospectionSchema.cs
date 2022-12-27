@@ -53,6 +53,7 @@ public class GraphQlType : GraphQlTypeBase
     public IList<GraphQlFieldType> Interfaces { get; set; }
     public IList<GraphQlEnumValue> EnumValues { get; set; }
     public IList<GraphQlFieldType> PossibleTypes { get; set; }
+    public ICollection<AppliedDirective> AppliedDirectives { get; set; }
 
     internal bool IsBuiltIn => Name is not null && Name.StartsWith("__");
 }
@@ -61,6 +62,8 @@ public abstract class GraphQlValueBase
 {
     public string Name { get; set; }
     public string Description { get; set; }
+
+    public ICollection<AppliedDirective> AppliedDirectives { get; set; }
 }
 
 [DebuggerDisplay(nameof(GraphQlEnumValue) + " (" + nameof(Name) + "={" + nameof(Name) + ",nq}; " + nameof(Description) + "={" + nameof(Description) + ",nq})")]
@@ -120,6 +123,19 @@ public interface IGraphQlMember
     string Name { get; }
     string Description { get; }
     GraphQlFieldType Type { get; }
+    ICollection<AppliedDirective> AppliedDirectives { get; set; }
+}
+
+public class AppliedDirective
+{
+    public string Name { get; set; }
+    public ICollection<DirectiveArgument> Args { get; set; }
+}
+
+public class DirectiveArgument
+{
+    public string Name { get; set; }
+    public string Value { get; set; }
 }
 
 public enum GraphQlDirectiveLocation

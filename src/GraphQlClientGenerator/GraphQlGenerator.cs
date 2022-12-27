@@ -905,11 +905,11 @@ using Newtonsoft.Json.Linq;
                 var itemTypeName = GetCSharpClassName(context, unwrappedItemType.Name);
 
                 var netItemType =
-                    IsUnknownObjectScalar(baseType, member.Name, itemType)
+                    IsUnknownObjectScalar(baseType, member.Name, itemType, member.AppliedDirectives)
                         ? "object"
                         : $"{(unwrappedItemType.Kind == GraphQlTypeKind.Interface ? "I" : null)}{_configuration.ClassPrefix}{itemTypeName}{_configuration.ClassSuffix}";
 
-                var suggestedScalarNetType = ScalarToNetType(baseType, member.Name, itemType).NetTypeName.TrimEnd('?');
+                var suggestedScalarNetType = ScalarToNetType(baseType, member.Name, itemType, member.AppliedDirectives).NetTypeName.TrimEnd('?');
                 if (!String.Equals(suggestedScalarNetType, "object") && !String.Equals(suggestedScalarNetType, "object?") &&
                     !suggestedScalarNetType.TrimEnd().EndsWith("System.Object") && !suggestedScalarNetType.TrimEnd().EndsWith("System.Object?"))
                     netItemType = suggestedScalarNetType;
@@ -936,7 +936,7 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, member.Type, member.Name)),
-            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, member.Type, member.Name),
+            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, member.Type, member.Name, member.AppliedDirectives),
             _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
         };
 
@@ -967,6 +967,27 @@ using Newtonsoft.Json.Linq;
             IntegerTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName),
             _ => throw new InvalidOperationException($"'{_configuration.IntegerTypeMapping}' not supported")
         };
+
+    private ScalarFieldTypeDescription GetIdNetTypeWrapper(GraphQlType baseType, GraphQlFieldType memberType, string memberName, ICollection<AppliedDirective> memberAppliedDirectives)
+    {
+        ScalarFieldTypeDescription description;
+        if (memberAppliedDirectives!=null && memberAppliedDirectives.Any())
+        {
+            description = ConvertToTypeDescription(GetClrDirectiveValue(memberAppliedDirectives) ?? "dynamic");
+        }
+        else
+        {
+            description = GetIdNetType(baseType, memberType, memberName);
+        }
+
+        return description;
+    }
+
+    private static string GetClrDirectiveValue(IEnumerable<AppliedDirective> directives)
+    {
+        var clrDirective = directives?.SingleOrDefault(d => d.Name == "clrType");
+        return clrDirective?.Args.FirstOrDefault(a => a.Name == "type")?.Value.Trim('"');
+    }
 
     private ScalarFieldTypeDescription GetIdNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.IdTypeMapping switch
@@ -1044,7 +1065,7 @@ using Newtonsoft.Json.Linq;
                 var field = fields[i];
                 var fieldType = field.Type.UnwrapIfNonNull();
                 var isList = fieldType.Kind == GraphQlTypeKind.List;
-                var treatUnknownObjectAsComplex = IsUnknownObjectScalar(type, field.Name, fieldType) && !_configuration.TreatUnknownObjectAsScalar;
+                var treatUnknownObjectAsComplex = IsUnknownObjectScalar(type, field.Name, fieldType, field.AppliedDirectives) && !_configuration.TreatUnknownObjectAsScalar;
                 var isComplex = isList || treatUnknownObjectAsComplex || IsComplexType(fieldType.Kind);
 
                 writer.Write(fieldMetadataIndentation);
@@ -1503,7 +1524,7 @@ using Newtonsoft.Json.Linq;
         var argumentTypeDescription =
             unwrappedType.Kind == GraphQlTypeKind.Enum
                 ? ConvertToTypeDescription($"{_configuration.ClassPrefix}{NamingHelper.ToPascalCase(unwrappedType.Name)}{_configuration.ClassSuffix}?")
-                : ScalarToNetType(baseType, argument.Name, argumentType);
+                : ScalarToNetType(baseType, argument.Name, argumentType, argument.AppliedDirectives);
 
         var argumentNetType = argumentTypeDescription.NetTypeName;
 
@@ -1742,23 +1763,23 @@ using Newtonsoft.Json.Linq;
         }
     }
 
-    private bool IsUnknownObjectScalar(GraphQlType baseType, string valueName, GraphQlFieldType fieldType)
+    private bool IsUnknownObjectScalar(GraphQlType baseType, string valueName, GraphQlFieldType fieldType, ICollection<AppliedDirective> appliedDirectives)
     {
         if (fieldType.UnwrapIfNonNull().Kind != GraphQlTypeKind.Scalar)
             return false;
 
-        var netType = ScalarToNetType(baseType, valueName, fieldType).NetTypeName;
+        var netType = ScalarToNetType(baseType, valueName, fieldType, appliedDirectives).NetTypeName;
         return netType == "object" || netType.TrimEnd().EndsWith("System.Object") || netType == "object?" || netType.TrimEnd().EndsWith("System.Object?");
     }
 
-    private ScalarFieldTypeDescription ScalarToNetType(GraphQlType baseType, string valueName, GraphQlFieldType valueType) =>
+    private ScalarFieldTypeDescription ScalarToNetType(GraphQlType baseType, string valueName, GraphQlFieldType valueType, ICollection<AppliedDirective> appliedDirectives) =>
         valueType.UnwrapIfNonNull().Name switch
         {
             GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, valueType, valueName)),
-            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, valueType, valueName),
+            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, valueType, valueName, appliedDirectives),
             GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, valueType, valueName),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
         };
