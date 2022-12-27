@@ -54,7 +54,7 @@ using Newtonsoft.Json;
         if (!Directory.Exists(outputDirectory))
             throw new ArgumentException($"Directory '{outputDirectory}' does not exist. ", nameof(outputDirectory));
 
-        if (string.IsNullOrWhiteSpace(@namespace))
+        if (String.IsNullOrWhiteSpace(@namespace))
             throw new ArgumentException("namespace required", nameof(@namespace));
 
         _outputDirectory = outputDirectory;
@@ -141,7 +141,7 @@ using Newtonsoft.Json;
 
         _currentFileName = null;
 
-        if (string.IsNullOrEmpty(_projectFileName))
+        if (String.IsNullOrEmpty(_projectFileName))
             return;
 
         var projectFileName = Path.Combine(_outputDirectory, _projectFileName);

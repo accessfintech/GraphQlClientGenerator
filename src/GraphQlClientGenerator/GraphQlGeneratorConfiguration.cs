@@ -84,7 +84,7 @@ public class GraphQlGeneratorConfiguration
         ScalarFieldTypeMappingProvider = DefaultScalarFieldTypeMappingProvider.Instance;
         PropertyAccessorBodyWriter = GeneratePropertyAccessors;
         CommentGeneration = CommentGenerationOption.Disabled;
-        IncludeDeprecatedFields = true;
+        IncludeDeprecatedFields = false;
         FloatTypeMapping = FloatTypeMapping.Decimal;
         BooleanTypeMapping = BooleanTypeMapping.Boolean;
         IntegerTypeMapping = IntegerTypeMapping.Int32;

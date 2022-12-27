@@ -19,22 +19,13 @@ public static class IntrospectionQuery
           ...InputValue
         }
       }
-      appliedDirectives{
-        ...AppliedDirective
-      }
     }
   }
 
   fragment FullType on __Type {
     kind
     name
-    appliedDirectives{
-      ...AppliedDirective
-    }
     description
-    appliedDirectives{
-      ...AppliedDirective
-    }
     fields(includeDeprecated: true) {
       name
       description
@@ -69,17 +60,11 @@ public static class IntrospectionQuery
     description
     type { ...TypeRef }
     defaultValue
-    appliedDirectives{
-      ...AppliedDirective
-    }
   }
 
   fragment TypeRef on __Type {
     kind
     name
-    appliedDirectives{
-      ...AppliedDirective
-    }
     ofType {
       kind
       name
@@ -103,14 +88,6 @@ public static class IntrospectionQuery
           }
         }
       }
-    }
-  }
-
-  fragment AppliedDirective on __AppliedDirective {
-    name
-    args {
-      name
-      value
     }
   }";
 }
