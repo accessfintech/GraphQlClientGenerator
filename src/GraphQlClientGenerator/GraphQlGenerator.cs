@@ -15,6 +15,8 @@ public class GraphQlGenerator
 
     private static readonly IDictionary<string, GraphQlType> _typesDictionary = new Dictionary<string, GraphQlType>();
 
+    private static readonly IDictionary<string, List<GraphQlType>> _implementingTypeToUnions = new Dictionary<string, List<GraphQlType>>();
+
     public const string RequiredNamespaces =
         $@"using System;
 using System.Collections;
@@ -106,6 +108,24 @@ using Newtonsoft.Json.Linq;
             foreach (var schemaType in schema.Types)
             {
                 _typesDictionary.Add(schemaType.Name, schemaType);
+            }
+
+            foreach (var unionType in _typesDictionary.Values.Where(t => t.Kind == GraphQlTypeKind.Union))
+            {
+                if (unionType.PossibleTypes != null)
+                {
+                    foreach (var unionImplementor in unionType.PossibleTypes)
+                    {
+                        if (_implementingTypeToUnions.ContainsKey(unionImplementor.Name) && _implementingTypeToUnions[unionImplementor.Name].All(t => t.Name != unionType.Name))
+                        {
+                            _implementingTypeToUnions[unionImplementor.Name].Add(_typesDictionary[unionType.Name]);
+                        }
+                        else
+                        {
+                            _implementingTypeToUnions[unionImplementor.Name] = new List<GraphQlType> { _typesDictionary[unionType.Name] };
+                        }
+                    }
+                }
             }
 
             return schema;
@@ -463,8 +483,8 @@ using Newtonsoft.Json.Linq;
         foreach (var complexType in complexTypes.Values)
         {
             var hasInputReference = context.ReferencedObjectTypes.Contains(complexType.Name);
-            var fieldsToGenerate = GetFieldsToGenerate(complexType, complexTypes);
-            var isInterface = complexType.Kind == GraphQlTypeKind.Interface;
+            var fieldsToGenerate = GetFieldsToGenerate(complexType, complexTypes, isDataClass: true);
+            var isInterfaceOrUnion = complexType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union;
             var csharpTypeName = GetCSharpClassName(context, complexType.Name);
 
             void GenerateBody(bool isInterfaceMember)
@@ -510,7 +530,7 @@ using Newtonsoft.Json.Linq;
             }
 
             var interfacesToImplement = new List<string>();
-            if (isInterface)
+            if (isInterfaceOrUnion)
             {
                 interfacesToImplement.Add(GenerateInterface(context, csharpTypeName, complexType, () => GenerateBody(true)));
             }
@@ -530,10 +550,14 @@ using Newtonsoft.Json.Linq;
                 }
             }
 
+            if (_implementingTypeToUnions.ContainsKey(complexType.Name))
+                interfacesToImplement.AddRange(_implementingTypeToUnions[complexType.Name].Select(x => $"I{x.Name}{_configuration.ClassSuffix}"));
+
+
             if (hasInputReference)
                 interfacesToImplement.Add("IGraphQlInputObject");
 
-            if (!isInterface)
+            if (!isInterfaceOrUnion)
                 GenerateDataClass(context, csharpTypeName, complexType, String.Join(", ", interfacesToImplement), () => GenerateBody(false));
         }
 
@@ -748,10 +772,10 @@ using Newtonsoft.Json.Linq;
         return fragments;
     }
 
-    private List<GraphQlField> GetFieldsToGenerate(GraphQlType type, IReadOnlyDictionary<string, GraphQlType> complexTypes)
+    private List<GraphQlField> GetFieldsToGenerate(GraphQlType type, IReadOnlyDictionary<string, GraphQlType> complexTypes, bool isDataClass = false)
     {
         var typeFields = type.Fields;
-        if (type.Kind == GraphQlTypeKind.Union)
+        if (!isDataClass && type.Kind == GraphQlTypeKind.Union)
         {
             var unionFields = new List<GraphQlField>();
             var unionFieldNames = new HashSet<string>();
@@ -760,6 +784,10 @@ using Newtonsoft.Json.Linq;
                     unionFields.AddRange(consistOfType.Fields.Where(f => unionFieldNames.Add(f.Name)));
 
             typeFields = unionFields;
+        }
+        else if (isDataClass && type.Kind == GraphQlTypeKind.Union)
+        {
+            return typeFields == null ? new List<GraphQlField>() : typeFields.ToList();
         }
 
         return typeFields?.Where(FilterDeprecatedFields).ToList();
@@ -894,7 +922,7 @@ using Newtonsoft.Json.Linq;
             case GraphQlTypeKind.InputObject:
                 var fieldTypeName = GetCSharpClassName(context, fieldType.Name);
                 var propertyType = $"{_configuration.ClassPrefix}{fieldTypeName}{_configuration.ClassSuffix}";
-                if (fieldType.Kind == GraphQlTypeKind.Interface)
+                if (fieldType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union)
                     propertyType = $"I{propertyType}";
 
                 return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(propertyType), baseType.Kind);
@@ -913,7 +941,7 @@ using Newtonsoft.Json.Linq;
                 var netItemType =
                     IsUnknownObjectScalar(baseType, member.Name, itemType, member.AppliedDirectives)
                         ? "object"
-                        : $"{(unwrappedItemType.Kind == GraphQlTypeKind.Interface ? "I" : null)}{_configuration.ClassPrefix}{itemTypeName}{_configuration.ClassSuffix}";
+                        : $"{(unwrappedItemType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union ? "I" : null)}{_configuration.ClassPrefix}{itemTypeName}{_configuration.ClassSuffix}";
 
                 var suggestedScalarNetType = ScalarToNetType(baseType, member.Name, itemType, member.AppliedDirectives).NetTypeName.TrimEnd('?');
                 if (!String.Equals(suggestedScalarNetType, "object") && !String.Equals(suggestedScalarNetType, "object?") &&
@@ -925,7 +953,7 @@ using Newtonsoft.Json.Linq;
 
                 var netCollectionType = String.Format(netCollectionOpenType, netItemType);
                 return new ScalarFieldTypeDescription { NetTypeName = netCollectionType };
-                //return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType), baseType.Kind);
+            //return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType), baseType.Kind);
 
             case GraphQlTypeKind.Scalar:
                 return GetScalarNetType(fieldType.Name, baseType, member);
