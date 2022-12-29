@@ -767,8 +767,14 @@ using Newtonsoft.Json.Linq;
 
     private string AddQuestionMarkIfNullableReferencesEnabled(string dataTypeIdentifier) => AddQuestionMarkIfNullableReferencesEnabled(_configuration, dataTypeIdentifier);
 
-    internal static string AddQuestionMarkIfNullableReferencesEnabled(GraphQlGeneratorConfiguration configuration, string dataTypeIdentifier) =>
-        configuration.CSharpVersion == CSharpVersion.NewestWithNullableReferences ? dataTypeIdentifier + "?" : dataTypeIdentifier;
+    internal static string AddQuestionMarkIfNullableReferencesEnabled(GraphQlGeneratorConfiguration configuration, string dataTypeIdentifier)
+    {
+        return configuration.CSharpVersion switch
+        {
+            CSharpVersion.NewestWithNullableReferences => dataTypeIdentifier + "?",
+            _ => dataTypeIdentifier
+        };
+    }
 
     private bool UseCustomClassNameIfDefined(ref string typeName)
     {
@@ -891,7 +897,7 @@ using Newtonsoft.Json.Linq;
                 if (fieldType.Kind == GraphQlTypeKind.Interface)
                     propertyType = $"I{propertyType}";
 
-                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(propertyType));
+                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(propertyType), baseType.Kind);
 
             case GraphQlTypeKind.Enum:
                 return _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, member.Type, member.Name);
@@ -918,13 +924,14 @@ using Newtonsoft.Json.Linq;
                     netItemType = AddQuestionMarkIfNullableReferencesEnabled(netItemType);
 
                 var netCollectionType = String.Format(netCollectionOpenType, netItemType);
-                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType));
+                return new ScalarFieldTypeDescription { NetTypeName = netCollectionType };
+                //return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType), baseType.Kind);
 
             case GraphQlTypeKind.Scalar:
                 return GetScalarNetType(fieldType.Name, baseType, member);
 
             default:
-                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string"));
+                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string"), baseType.Kind);
         }
     }
 
@@ -935,25 +942,25 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
-            GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, member.Type, member.Name)),
+            GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, member.Type, member.Name),
             GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, member.Type, member.Name, member.AppliedDirectives),
             _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
         };
 
-    private string GetBooleanNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
+    private ScalarFieldTypeDescription GetBooleanNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.BooleanTypeMapping switch
         {
-            BooleanTypeMapping.Boolean => "bool?",
-            BooleanTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName).NetTypeName,
+            BooleanTypeMapping.Boolean => ConvertToTypeDescription("bool", valueType.Kind),
+            BooleanTypeMapping.Custom => ConvertToTypeDescription(_configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName).NetTypeName, valueType.Kind),
             _ => throw new InvalidOperationException($"'{_configuration.BooleanTypeMapping}' not supported")
         };
 
     private ScalarFieldTypeDescription GetFloatNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.FloatTypeMapping switch
         {
-            FloatTypeMapping.Decimal => ConvertToTypeDescription("decimal?"),
-            FloatTypeMapping.Float => ConvertToTypeDescription("float?"),
-            FloatTypeMapping.Double => ConvertToTypeDescription("double?"),
+            FloatTypeMapping.Decimal => ConvertToTypeDescription("decimal", valueType.Kind),
+            FloatTypeMapping.Float => ConvertToTypeDescription("float", valueType.Kind),
+            FloatTypeMapping.Double => ConvertToTypeDescription("double", valueType.Kind),
             FloatTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName),
             _ => throw new InvalidOperationException($"'{_configuration.FloatTypeMapping}' not supported")
         };
@@ -961,24 +968,16 @@ using Newtonsoft.Json.Linq;
     private ScalarFieldTypeDescription GetIntegerNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.IntegerTypeMapping switch
         {
-            IntegerTypeMapping.Int32 => ConvertToTypeDescription("int?"),
-            IntegerTypeMapping.Int16 => ConvertToTypeDescription("short?"),
-            IntegerTypeMapping.Int64 => ConvertToTypeDescription("long?"),
+            IntegerTypeMapping.Int32 => ConvertToTypeDescription("int", valueType.Kind),
+            IntegerTypeMapping.Int16 => ConvertToTypeDescription("short", valueType.Kind),
+            IntegerTypeMapping.Int64 => ConvertToTypeDescription("long", valueType.Kind),
             IntegerTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName),
             _ => throw new InvalidOperationException($"'{_configuration.IntegerTypeMapping}' not supported")
         };
 
     private ScalarFieldTypeDescription GetIdNetTypeWrapper(GraphQlType baseType, GraphQlFieldType memberType, string memberName, ICollection<AppliedDirective> memberAppliedDirectives)
     {
-        ScalarFieldTypeDescription description;
-        if (memberAppliedDirectives!=null && memberAppliedDirectives.Any())
-        {
-            description = ConvertToTypeDescription(GetClrDirectiveValue(memberAppliedDirectives) ?? "dynamic");
-        }
-        else
-        {
-            description = GetIdNetType(baseType, memberType, memberName);
-        }
+        var description = ConvertToTypeDescription(GetClrDirectiveValue(memberAppliedDirectives) ?? "dynamic", memberType.Kind);
 
         return description;
     }
@@ -992,16 +991,16 @@ using Newtonsoft.Json.Linq;
     private ScalarFieldTypeDescription GetIdNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.IdTypeMapping switch
         {
-            IdTypeMapping.String => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string")),
-            IdTypeMapping.Guid => ConvertToTypeDescription("Guid?"),
-            IdTypeMapping.Object => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("object")),
+            IdTypeMapping.String => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string"), valueType.Kind),
+            IdTypeMapping.Guid => ConvertToTypeDescription("Guid", valueType.Kind),
+            IdTypeMapping.Object => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("object"), valueType.Kind),
             IdTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName),
             _ => throw new InvalidOperationException($"'{_configuration.IdTypeMapping}' not supported")
         };
 
     private ScalarFieldTypeDescription GetJsonScalarNetType(GraphQlType baseType, GraphQlFieldType memberType, string valueName)
     {
-        return ConvertToTypeDescription("JObject");
+        return ConvertToTypeDescription("JObject", memberType.Kind);
     }
 
     private static InvalidOperationException ListItemTypeResolutionFailedException(string typeName, string fieldName) =>
@@ -1523,7 +1522,7 @@ using Newtonsoft.Json.Linq;
 
         var argumentTypeDescription =
             unwrappedType.Kind == GraphQlTypeKind.Enum
-                ? ConvertToTypeDescription($"{_configuration.ClassPrefix}{NamingHelper.ToPascalCase(unwrappedType.Name)}{_configuration.ClassSuffix}?")
+                ? ConvertToTypeDescription($"{_configuration.ClassPrefix}{NamingHelper.ToPascalCase(unwrappedType.Name)}{_configuration.ClassSuffix}?", baseType.Kind)
                 : ScalarToNetType(baseType, argument.Name, argumentType, argument.AppliedDirectives);
 
         var argumentNetType = argumentTypeDescription.NetTypeName;
@@ -1778,7 +1777,7 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
-            GraphQlTypeBase.GraphQlTypeScalarBoolean => ConvertToTypeDescription(GetBooleanNetType(baseType, valueType, valueName)),
+            GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, valueType, valueName, appliedDirectives),
             GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, valueType, valueName),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
@@ -1799,7 +1798,13 @@ using Newtonsoft.Json.Linq;
         return typeDescription;
     }
 
-    private static ScalarFieldTypeDescription ConvertToTypeDescription(string netTypeName) => new() { NetTypeName = netTypeName };
+    private static ScalarFieldTypeDescription ConvertToTypeDescription(string netTypeName, GraphQlTypeKind kind)
+    {
+        const string NullableSign = "?";
+        return netTypeName.EndsWith(NullableSign)
+                   ? new ScalarFieldTypeDescription { NetTypeName = netTypeName }
+                   : new ScalarFieldTypeDescription { NetTypeName = kind == GraphQlTypeKind.NonNull ? netTypeName : $"{netTypeName}{NullableSign}" };
+    }
 
     private struct QueryBuilderParameterDefinition
     {

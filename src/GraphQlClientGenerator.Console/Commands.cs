@@ -51,7 +51,7 @@ internal static class Commands
                 new Option<OutputType>("--outputType", () => OutputType.SingleFile, "Specifies generated classes organization"),
                 new Option<bool>("--partialClasses", () => false, "Mark classes as \"partial\""),
                 classMappingOption,
-                new Option<IdTypeMapping>("--idTypeMapping", () => IdTypeMapping.String, "Specifies the .NET type generated for GraphQL ID data type"),
+                new Option<IdTypeMapping>("--idTypeMapping", () => IdTypeMapping.Custom, "Specifies the .NET type generated for GraphQL ID data type"),
                 new Option<FloatTypeMapping>("--floatTypeMapping", () => FloatTypeMapping.Double, "Specifies the .NET type generated for GraphQL Float data type"),
                 new Option<JsonPropertyGenerationOption>("--jsonPropertyAttribute", () => JsonPropertyGenerationOption.CaseInsensitive, "Specifies the condition for using \"JsonPropertyAttribute\""),
                 new Option<EnumValueNamingOption>("--enumValueNaming", "Use \"Original\" to avoid pretty C# name conversion for maximum deserialization compatibility"),

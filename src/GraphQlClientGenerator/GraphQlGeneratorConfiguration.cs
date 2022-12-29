@@ -88,7 +88,7 @@ public class GraphQlGeneratorConfiguration
         FloatTypeMapping = FloatTypeMapping.Double;
         BooleanTypeMapping = BooleanTypeMapping.Boolean;
         IntegerTypeMapping = IntegerTypeMapping.Int32;
-        IdTypeMapping = IdTypeMapping.String;
+        IdTypeMapping = IdTypeMapping.Custom;
         TreatUnknownObjectAsScalar = false;
         GeneratePartialClasses = true;
         MemberAccessibility = MemberAccessibility.Public;
