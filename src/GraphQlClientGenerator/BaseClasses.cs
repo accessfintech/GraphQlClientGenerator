@@ -177,7 +177,11 @@ internal static class GraphQlQueryHelper
         }
 
         if (value is JObject jObject)
-            return BuildEnumerableArgument(jObject, null, formatting, level + 1, indentationSize, '{', '}');
+        {
+            var str = jObject.ToString(formatting == Formatting.Indented ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None);
+            var escapedStr = Newtonsoft.Json.JsonConvert.ToString(str);
+            return escapedStr;
+        }
 #endif
 
         var enumerable = value as IEnumerable;
