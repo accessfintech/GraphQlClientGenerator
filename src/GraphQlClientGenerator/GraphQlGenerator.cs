@@ -68,17 +68,11 @@ using Newtonsoft.Json.Linq;
         var stringContent = new StringContent(serializeObject, Encoding.UTF8, "application/json");
 
 
-        var httpResponseMessage = await client.PostAsync(
-                                      url,
-                                      stringContent);
+        var httpResponseMessage = await client.PostAsync(url, stringContent);
         string content;
-        using (var response =
-               httpResponseMessage)
+        using (var response = httpResponseMessage)
         {
-            content =
-                response.Content == null
-                    ? "(no content)"
-                    : await response.Content.ReadAsStringAsync();
+            content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
                 throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}); content: {content}");
@@ -300,6 +294,11 @@ using Newtonsoft.Json.Linq;
 
         void WriteMappingEntry(string netType, string graphQlTypeName)
         {
+            if (netType == "dynamic")
+            {
+                return;
+            }
+
             if (!netTypeKeys.Add(netType))
                 return;
 
@@ -1196,7 +1195,7 @@ using Newtonsoft.Json.Linq;
             var field = fields[i];
             var fieldType = field.Type.UnwrapIfNonNull();
             if (fieldType.Kind == GraphQlTypeKind.List)
-                fieldType = fieldType.OfType;
+                fieldType = UnwrapListItemType(fieldType, out var _);
 
             fieldType = fieldType.UnwrapIfNonNull();
             var isFragment = i >= firstFragmentIndex;
