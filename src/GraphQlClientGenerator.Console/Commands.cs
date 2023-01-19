@@ -57,6 +57,7 @@ internal static class Commands
                 new Option<EnumValueNamingOption>("--enumValueNaming", "Use \"Original\" to avoid pretty C# name conversion for maximum deserialization compatibility"),
                 new Option<bool>("--includeDeprecatedFields", () => false, "Generate deprecated fields"),
                 new Option<bool>("--includeAppliedDirectives", () => false, "Include applied directives in Introspection Query"),
+                new Option<string>("--regexScalarFieldTypeMappingConfigurationFile", "The path to the Json file describing custom scalar types mapping"),
                 regexScalarFieldTypeMappingConfigurationOption
             };
 

@@ -99,7 +99,6 @@ public abstract class GraphQlTypeBase
     public const string GraphQlTypeScalarId = "ID";
     public const string GraphQlTypeScalarInteger = "Int";
     public const string GraphQlTypeScalarString = "String";
-    public const string GraphQlTypeScalarJson = "Json";
 
 
     internal static readonly ICollection<string> AllBuiltInScalarTypeNames =
@@ -109,8 +108,7 @@ public abstract class GraphQlTypeBase
             GraphQlTypeScalarFloat,
             GraphQlTypeScalarId,
             GraphQlTypeScalarInteger,
-            GraphQlTypeScalarString,
-            GraphQlTypeScalarJson
+            GraphQlTypeScalarString
         };
 
     public GraphQlTypeKind Kind { get; set; }

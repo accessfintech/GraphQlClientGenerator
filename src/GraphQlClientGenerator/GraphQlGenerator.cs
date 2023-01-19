@@ -1025,11 +1025,6 @@ using Newtonsoft.Json.Linq;
             _ => throw new InvalidOperationException($"'{_configuration.IdTypeMapping}' not supported")
         };
 
-    private ScalarFieldTypeDescription GetJsonScalarNetType(GraphQlType baseType, GraphQlFieldType memberType, string valueName)
-    {
-        return ConvertToTypeDescription("JObject", memberType.Kind);
-    }
-
     private static InvalidOperationException ListItemTypeResolutionFailedException(string typeName, string fieldName) =>
         FieldTypeResolutionFailedException(typeName, fieldName, "list item type was not resolved; nested collections too deep");
 
@@ -1806,7 +1801,6 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, valueType, valueName, appliedDirectives),
-            GraphQlTypeBase.GraphQlTypeScalarJson => GetJsonScalarNetType(baseType, valueType, valueName),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
         };
 
