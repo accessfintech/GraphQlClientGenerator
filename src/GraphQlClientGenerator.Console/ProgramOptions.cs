@@ -20,4 +20,5 @@ public class ProgramOptions
     public FloatTypeMapping FloatTypeMapping { get; set; }
     public JsonPropertyGenerationOption JsonPropertyAttribute { get; set; }
     public EnumValueNamingOption EnumValueNaming { get; set; }
+    public bool IncludeDeprecatedFields { get; set; }
 }
