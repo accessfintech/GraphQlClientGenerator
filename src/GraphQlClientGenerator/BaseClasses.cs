@@ -544,7 +544,7 @@ public abstract class GraphQlDirective
     }
 }
 
-public abstract class GraphQlQueryBuilder : IGraphQlQueryBuilder
+public abstract partial class GraphQlQueryBuilder : IGraphQlQueryBuilder
 {
     private readonly Dictionary<string, GraphQlFieldCriteria> _fieldCriteria = new Dictionary<string, GraphQlFieldCriteria>();
 
@@ -860,12 +860,6 @@ public abstract class GraphQlQueryBuilder<TQueryBuilder> : GraphQlQueryBuilder w
     public TQueryBuilder WithAllScalarFields()
     {
         IncludeFields(AllFields.Where(f => !f.IsComplex));
-        return (TQueryBuilder)this;
-    }
-
-    public TQueryBuilder WithAllGenericFieldTypes()
-    {
-        IncludeFields(AllFields.Where(f => f.QueryBuilderType == null));
         return (TQueryBuilder)this;
     }
 
