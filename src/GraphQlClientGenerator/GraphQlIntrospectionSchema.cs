@@ -6,8 +6,8 @@ namespace GraphQlClientGenerator;
 
 public class GraphQlResult
 {
-    public ICollection<GraphQlError> Errors { get; set; }
     public GraphQlData Data { get; set; }
+    public ICollection<GraphQlError> Errors { get; set; }
 }
 
 public class GraphQlError
@@ -62,7 +62,6 @@ public abstract class GraphQlValueBase
 {
     public string Name { get; set; }
     public string Description { get; set; }
-
     public ICollection<AppliedDirective> AppliedDirectives { get; set; }
 }
 
@@ -123,7 +122,7 @@ public interface IGraphQlMember
     string Name { get; }
     string Description { get; }
     GraphQlFieldType Type { get; }
-    ICollection<AppliedDirective> AppliedDirectives { get; set; }
+    ICollection<AppliedDirective> AppliedDirectives { get; }
 }
 
 public class AppliedDirective

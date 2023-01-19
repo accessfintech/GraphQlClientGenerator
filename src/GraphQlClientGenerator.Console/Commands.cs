@@ -56,6 +56,7 @@ internal static class Commands
                 new Option<JsonPropertyGenerationOption>("--jsonPropertyAttribute", () => JsonPropertyGenerationOption.CaseInsensitive, "Specifies the condition for using \"JsonPropertyAttribute\""),
                 new Option<EnumValueNamingOption>("--enumValueNaming", "Use \"Original\" to avoid pretty C# name conversion for maximum deserialization compatibility"),
                 new Option<bool>("--includeDeprecatedFields", () => false, "Generate deprecated fields"),
+                new Option<bool>("--includeAppliedDirectives", () => false, "Include applied directives in Introspection Query"),
                 regexScalarFieldTypeMappingConfigurationOption
             };
 

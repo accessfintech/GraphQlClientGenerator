@@ -57,13 +57,13 @@ using Newtonsoft.Json.Linq;
     public GraphQlGenerator(GraphQlGeneratorConfiguration configuration = null) =>
         _configuration = configuration ?? new GraphQlGeneratorConfiguration();
 
-    public static async Task<GraphQlSchema> RetrieveSchema(HttpMethod method, string url, IEnumerable<KeyValuePair<string, string>> headers = null)
+    public static async Task<GraphQlSchema> RetrieveSchema(HttpMethod method, string url, bool includeAppliedDirectives, IEnumerable<KeyValuePair<string, string>> headers = null)
     {
         const string IntrospectionOperation = "IntrospectionQuery";
 
         using var client = new HttpClient();
 
-        var value = new { operationName = IntrospectionOperation, query = IntrospectionQuery.Text };
+        var value = new { operationName = IntrospectionOperation, query = IntrospectionQuery.Get(includeAppliedDirectives) };
         var serializeObject = JsonConvert.SerializeObject(value);
         var stringContent = new StringContent(serializeObject, Encoding.UTF8, "application/json");
 
