@@ -7,9 +7,9 @@
     <Company>Tibber</Company>
     <VersionPrefix>0.9.14</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/accessfintech/GraphQlClientGenerator</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/Husqvik/GraphQlClientGenerator</PackageProjectUrl>
     <PackageIcon>GraphQlLogo.png</PackageIcon>
-    <RepositoryUrl>https://github.com/accessfintech/GraphQlClientGenerator</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Husqvik/GraphQlClientGenerator</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
