@@ -3,8 +3,8 @@
   <PropertyGroup>
     <LangVersion>latest</LangVersion>
     <Copyright>Copyright 2017-2022</Copyright>
-    <Authors>Artur Gordashnikov, Sharon Reytan, Yonatan Gross</Authors>
-    <Company>AccessFintech</Company>
+    <Authors>Husqvik</Authors>
+    <Company>Tibber</Company>
     <VersionPrefix>0.9.14</VersionPrefix>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/accessfintech/GraphQlClientGenerator</PackageProjectUrl>
