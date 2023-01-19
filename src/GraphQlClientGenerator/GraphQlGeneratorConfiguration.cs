@@ -84,17 +84,17 @@ public class GraphQlGeneratorConfiguration
         ScalarFieldTypeMappingProvider = DefaultScalarFieldTypeMappingProvider.Instance;
         PropertyAccessorBodyWriter = GeneratePropertyAccessors;
         CommentGeneration = CommentGenerationOption.Disabled;
-        IncludeDeprecatedFields = true;
-        FloatTypeMapping = FloatTypeMapping.Double;
+        IncludeDeprecatedFields = false;
+        FloatTypeMapping = FloatTypeMapping.Decimal;
         BooleanTypeMapping = BooleanTypeMapping.Boolean;
         IntegerTypeMapping = IntegerTypeMapping.Int32;
-        IdTypeMapping = IdTypeMapping.Custom;
+        IdTypeMapping = IdTypeMapping.Guid;
         TreatUnknownObjectAsScalar = false;
         GeneratePartialClasses = true;
         MemberAccessibility = MemberAccessibility.Public;
         JsonPropertyGeneration = JsonPropertyGenerationOption.CaseInsensitive;
         PropertyGeneration = PropertyGenerationOption.AutoProperty;
-        EnumValueNaming = EnumValueNamingOption.Original;
+        EnumValueNaming = EnumValueNamingOption.CSharp;
     }
 
     public string GeneratePropertyAccessors(string backingFieldName, ScalarFieldTypeDescription backingFieldType)
