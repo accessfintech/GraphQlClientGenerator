@@ -26,6 +26,7 @@ public static class IntrospectionQuery
       }
     }
   }
+
   fragment FullType on __Type {
     kind
     name
@@ -58,12 +59,14 @@ public static class IntrospectionQuery
       ...TypeRef
     }
   }
+
   fragment InputValue on __InputValue {
     name
     description
     type { ...TypeRef }
     defaultValue
   }
+
   fragment TypeRef on __Type {
     kind
     name
