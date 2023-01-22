@@ -59,24 +59,31 @@ using Newtonsoft.Json.Linq;
 
     public static async Task<GraphQlSchema> RetrieveSchema(HttpMethod method, string url, bool includeAppliedDirectives, IEnumerable<KeyValuePair<string, string>> headers = null)
     {
-        const string IntrospectionOperation = "IntrospectionQuery";
+        StringContent requestContent = null;
+        if (method == HttpMethod.Get)
+            url += $"?&query={IntrospectionQuery.Get(includeAppliedDirectives)}";
+        else
+            requestContent = new StringContent(JsonConvert.SerializeObject(new
+            {
+                operationName = IntrospectionQuery.OperationName,
+                query = IntrospectionQuery.Get(includeAppliedDirectives)
+            }), Encoding.UTF8, "application/json");
 
-        using var client = new HttpClient();
+        using var request = new HttpRequestMessage(method, url) { Content = requestContent };
 
-        var value = new { operationName = IntrospectionOperation, query = IntrospectionQuery.Get(includeAppliedDirectives) };
-        var serializeObject = JsonConvert.SerializeObject(value);
-        var stringContent = new StringContent(serializeObject, Encoding.UTF8, "application/json");
+        if (headers is not null)
+            foreach (var kvp in headers)
+                request.Headers.TryAddWithoutValidation(kvp.Key, kvp.Value);
 
+        using var response = await HttpClient.SendAsync(request);
 
-        var httpResponseMessage = await client.PostAsync(url, stringContent);
-        string content;
-        using (var response = httpResponseMessage)
-        {
-            content = await response.Content.ReadAsStringAsync();
+        var content =
+            response.Content is null
+                ? "(no content)"
+                : await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-                throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}); content: {content}");
-        }
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Status code: {(int)response.StatusCode} ({response.StatusCode}){Environment.NewLine}content:{Environment.NewLine}{content}");
 
         return DeserializeGraphQlSchema(content);
     }
@@ -1004,7 +1011,8 @@ using Newtonsoft.Json.Linq;
 
     private ScalarFieldTypeDescription GetIdNetTypeWrapper(GraphQlType baseType, GraphQlFieldType memberType, string memberName, ICollection<AppliedDirective> memberAppliedDirectives)
     {
-        var description = ConvertToTypeDescription(GetClrDirectiveValue(memberAppliedDirectives) ?? "dynamic", memberType.Kind);
+        var clrDirectiveValue = GetClrDirectiveValue(memberAppliedDirectives);
+        var description = ConvertToTypeDescription(clrDirectiveValue ?? "dynamic", memberType.Kind);
 
         return description;
     }

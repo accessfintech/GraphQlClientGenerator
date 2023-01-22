@@ -2,6 +2,8 @@
 
 public static class IntrospectionQuery
 {
+    public const string OperationName = "IntrospectionQuery";
+
     public static string Get(bool includeAppliedDirectives) =>
         includeAppliedDirectives ? TextWithAppliedDirectives : Text;
 
@@ -91,7 +93,7 @@ public static class IntrospectionQuery
     }
   }";
 
-    public const string TextWithAppliedDirectives =
+    private const string TextWithAppliedDirectives =
         @"query IntrospectionQuery {
     __schema {
       queryType { name }
