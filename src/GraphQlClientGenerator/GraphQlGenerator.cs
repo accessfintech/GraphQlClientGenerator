@@ -60,14 +60,11 @@ using Newtonsoft.Json.Linq;
     public static async Task<GraphQlSchema> RetrieveSchema(HttpMethod method, string url, bool includeAppliedDirectives, IEnumerable<KeyValuePair<string, string>> headers = null)
     {
         StringContent requestContent = null;
+        var introspectionQueryText = IntrospectionQuery.Get(includeAppliedDirectives);
         if (method == HttpMethod.Get)
-            url += $"?&query={IntrospectionQuery.Get(includeAppliedDirectives)}";
+            url += $"?&query={introspectionQueryText}";
         else
-            requestContent = new StringContent(JsonConvert.SerializeObject(new
-            {
-                operationName = IntrospectionQuery.OperationName,
-                query = IntrospectionQuery.Get(includeAppliedDirectives)
-            }), Encoding.UTF8, "application/json");
+            requestContent = new StringContent(JsonConvert.SerializeObject(new { operationName = IntrospectionQuery.OperationName, query = introspectionQueryText }), Encoding.UTF8, "application/json");
 
         using var request = new HttpRequestMessage(method, url) { Content = requestContent };
 
