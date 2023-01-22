@@ -2,7 +2,7 @@
   "profiles": {
     "GraphQlClientGenerator.Console": {
       "commandName": "Project",
-      "commandLineArgs": "--serviceUrl http://localhost:3999/graphql --outputPath C:\\AF\\automation\\AccessFintech.Automation\\AccessFintech.Automation.Framework\\GraphQL\\GeneratedGraphqlClient\\GeneratedGraphqlClient.cs --namespace AccessFintech.Automation.Framework.GraphQL.GeneratedGraphqlClient --enumValueNaming Original --idTypeMapping Custom --floatTypeMapping Double --csharpVersion Newest --includeDeprecatedFields true --includeAppliedDirectives true"
+      "commandLineArgs": "--serviceUrl http://localhost:3999/graphql --outputPath C:\\AF\\automation\\AccessFintech.Automation\\AccessFintech.Automation.Framework\\GraphQL\\GeneratedGraphqlClient\\GeneratedGraphqlClient.cs --namespace AccessFintech.Automation.Framework.GraphQL.GeneratedGraphqlClient --enumValueNaming Original --idTypeMapping Custom --floatTypeMapping Double --csharpVersion Newest --includeDeprecatedFields true --includeAppliedDirectives true --regexScalarFieldTypeMappingConfigurationFile C:/AF/automation/AccessFintech.Automation/CustomScalarsMapping.json"
     }
   }
 }
