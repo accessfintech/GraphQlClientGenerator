@@ -219,7 +219,7 @@ using Newtonsoft.Json.Linq;
             else
                 continue;
 
-            var candidateClassName = NamingHelper.ToPascalCase(graphQlType.Name); ;
+            var candidateClassName = NamingHelper.ToPascalCase(graphQlType.Name);;
             var finalClassName = candidateClassName;
             var collisionIteration = 1;
 
@@ -520,18 +520,16 @@ using Newtonsoft.Json.Linq;
 
                     foreach (var field in fieldsToGenerate)
                         GenerateDataProperty(
-                            baseType: complexType,
-                            member: field,
-                            propertyName: NamingHelper.ToPascalCase(field.Name),
-                            isInterfaceMember: isInterfaceMember,
-                            isDeprecated: field.IsDeprecated,
-                            deprecationReason: field.DeprecationReason,
-                            decorateWithJsonPropertyAttribute: true,
-                            writeBody: (_, backingFieldName) =>
-                                writer.Write(generateBackingFields
-                                                 ? _configuration.PropertyAccessorBodyWriter(backingFieldName, GetDataPropertyType(context, complexType, field))
-                                                 : " { get; set; }"),
-                            context: context);
+                            complexType,
+                            field,
+                            NamingHelper.ToPascalCase(field.Name),
+                            isInterfaceMember,
+                            field.IsDeprecated,
+                            field.DeprecationReason,
+                            true,
+                            (_, backingFieldName) =>
+                                writer.Write(generateBackingFields ? _configuration.PropertyAccessorBodyWriter(backingFieldName, GetDataPropertyType(context, complexType, field)) : " { get; set; }"),
+                            context);
                 }
             }
 
@@ -621,14 +619,14 @@ using Newtonsoft.Json.Linq;
 
         foreach (var kvp in fieldNameMembers)
             GenerateDataProperty(
-                baseType: type,
-                member: kvp.Value.Member,
-                propertyName: NamingHelper.ToPascalCase(kvp.Value.Member.Name) + kvp.Value.NameExtension,
-                isInterfaceMember: false,
-                isDeprecated: false,
-                deprecationReason: null,
-                decorateWithJsonPropertyAttribute: true,
-                writeBody: (t, _) =>
+                type,
+                kvp.Value.Member,
+                NamingHelper.ToPascalCase(kvp.Value.Member.Name) + kvp.Value.NameExtension,
+                false,
+                false,
+                null,
+                true,
+                (t, _) =>
                 {
                     writer.WriteLine();
                     writer.Write(indentation);
@@ -671,7 +669,7 @@ using Newtonsoft.Json.Linq;
                     writer.Write(indentation);
                     writer.WriteLine("    }");
                 },
-                context: context);
+                context);
 
         writer.Write(indentation);
         writer.WriteLine("    IEnumerable<InputPropertyInfo> IGraphQlInputObject.GetPropertyValues()");
@@ -801,14 +799,8 @@ using Newtonsoft.Json.Linq;
 
     private string AddQuestionMarkIfNullableReferencesEnabled(string dataTypeIdentifier) => AddQuestionMarkIfNullableReferencesEnabled(_configuration, dataTypeIdentifier);
 
-    internal static string AddQuestionMarkIfNullableReferencesEnabled(GraphQlGeneratorConfiguration configuration, string dataTypeIdentifier)
-    {
-        return configuration.CSharpVersion switch
-        {
-            CSharpVersion.NewestWithNullableReferences => dataTypeIdentifier + "?",
-            _ => dataTypeIdentifier
-        };
-    }
+    internal static string AddQuestionMarkIfNullableReferencesEnabled(GraphQlGeneratorConfiguration configuration, string dataTypeIdentifier) =>
+        configuration.CSharpVersion == CSharpVersion.NewestWithNullableReferences ? dataTypeIdentifier + "?" : dataTypeIdentifier;
 
     private bool UseCustomClassNameIfDefined(ref string typeName)
     {
@@ -972,14 +964,14 @@ using Newtonsoft.Json.Linq;
     private ScalarFieldTypeDescription GetScalarNetType(string scalarTypeName, GraphQlType baseType, IGraphQlMember member) =>
         scalarTypeName
             switch
-        {
-            GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, member.Type, member.Name),
-            GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
-            GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
-            GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, member.Type, member.Name),
-            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, member.Type, member.Name, member.AppliedDirectives),
-            _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
-        };
+            {
+                GraphQlTypeBase.GraphQlTypeScalarInteger => GetIntegerNetType(baseType, member.Type, member.Name),
+                GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
+                GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
+                GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, member.Type, member.Name),
+                GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, member.Type, member.Name, member.AppliedDirectives),
+                _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
+            };
 
     private ScalarFieldTypeDescription GetBooleanNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
         _configuration.BooleanTypeMapping switch
