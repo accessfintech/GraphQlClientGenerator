@@ -123,12 +123,12 @@ public static class IntrospectionQuery
       ...AppliedDirective
     }
     description
-    appliedDirectives{
-      ...AppliedDirective
-    }
     fields(includeDeprecated: true) {
       name
-      description
+      description 
+      appliedDirectives{
+        ...AppliedDirective
+      }
       args {
         ...InputValue
       }
@@ -154,7 +154,7 @@ public static class IntrospectionQuery
       ...TypeRef
     }
   }
-
+  
   fragment InputValue on __InputValue {
     name
     description
@@ -180,17 +180,9 @@ public static class IntrospectionQuery
         ofType {
           kind
           name
-            ofType {
+          ofType {
             kind
             name
-            ofType {
-              kind
-              name
-              ofType {
-                kind
-                name
-              }
-            }
           }
         }
       }

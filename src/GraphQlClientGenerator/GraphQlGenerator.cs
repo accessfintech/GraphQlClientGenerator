@@ -923,7 +923,7 @@ using Newtonsoft.Json.Linq;
                 if (fieldType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union)
                     propertyType = $"I{propertyType}";
 
-                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(propertyType), baseType.Kind);
+                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(propertyType));
 
             case GraphQlTypeKind.Enum:
                 return _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, member.Type, member.Name);
@@ -957,7 +957,7 @@ using Newtonsoft.Json.Linq;
                 return GetScalarNetType(fieldType.Name, baseType, member);
 
             default:
-                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string"), baseType.Kind);
+                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string"));
         }
     }
 
@@ -1819,13 +1819,10 @@ using Newtonsoft.Json.Linq;
         return typeDescription;
     }
 
-    private static ScalarFieldTypeDescription ConvertToTypeDescription(string netTypeName, GraphQlTypeKind kind)
-    {
-        const string NullableSign = "?";
-        return netTypeName.EndsWith(NullableSign)
-                   ? new ScalarFieldTypeDescription { NetTypeName = netTypeName }
-                   : new ScalarFieldTypeDescription { NetTypeName = kind == GraphQlTypeKind.NonNull ? netTypeName : $"{netTypeName}{NullableSign}" };
-    }
+    private static ScalarFieldTypeDescription ConvertToTypeDescription(string netTypeName) => new() { NetTypeName = netTypeName };
+
+    private static ScalarFieldTypeDescription ConvertToTypeDescription(string netTypeName, GraphQlTypeKind kind) =>
+        new() { NetTypeName = netTypeName.EndsWith("?") || kind == GraphQlTypeKind.NonNull ? netTypeName : netTypeName + "?" };
 
     private struct QueryBuilderParameterDefinition
     {
