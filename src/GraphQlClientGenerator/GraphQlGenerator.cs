@@ -155,11 +155,13 @@ using Newtonsoft.Json.Linq;
         writer.WriteLine(RequiredNamespaces);
         writer.Write("namespace ");
         writer.WriteLine(@namespace);
-        writer.WriteLine("{");
+
+            writer.WriteLine("{");
 
         Generate(new SingleFileGenerationContext(schema, writer, indentationSize: 4));
 
-        writer.WriteLine("}");
+            writer.WriteLine("}");
+
         writer.Flush();
     }
 
@@ -1129,6 +1131,8 @@ using Newtonsoft.Json.Linq;
             writer.WriteLine();
         }
 
+
+
         GraphQlDirectiveLocation directiveLocation;
         if (type.Name == schema.QueryType?.Name)
             directiveLocation = GraphQlDirectiveLocation.Query;
@@ -1138,6 +1142,20 @@ using Newtonsoft.Json.Linq;
             directiveLocation = GraphQlDirectiveLocation.Subscription;
         else
             directiveLocation = GraphQlDirectiveLocation.Field;
+
+        if (type.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union)
+        {
+            var constructorIndentation = indentation + "    ";
+            writer.Write(constructorIndentation);
+            writer.WriteLine($"public {className}()");
+            writer.Write(constructorIndentation);
+            writer.WriteLine("{");
+            writer.Write(constructorIndentation);
+            writer.WriteLine("    WithTypeName();");
+            writer.Write(constructorIndentation);
+            writer.WriteLine("}");
+            writer.WriteLine();
+        }
 
         var hasQueryPrefix = directiveLocation != GraphQlDirectiveLocation.Field;
 
