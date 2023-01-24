@@ -53,6 +53,8 @@ internal static class GraphQlCSharpFileHelper
                 MemberAccessibility = options.MemberAccessibility,
                 IdTypeMapping = options.IdTypeMapping,
                 FloatTypeMapping = options.FloatTypeMapping,
+                BooleanTypeMapping = options.BooleanTypeMapping,
+                IntegerTypeMapping = options.IntegerTypeMapping,
                 JsonPropertyGeneration = options.JsonPropertyAttribute,
                 EnumValueNaming = options.EnumValueNaming,
                 IncludeDeprecatedFields = options.IncludeDeprecatedFields
