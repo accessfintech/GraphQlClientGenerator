@@ -1094,7 +1094,7 @@ using Newtonsoft.Json.Linq;
                 var fieldType = field.Type.UnwrapIfNonNull();
                 var isList = fieldType.Kind == GraphQlTypeKind.List;
                 var treatUnknownObjectAsComplex = IsUnknownObjectScalar(type, field.Name, fieldType, field.AppliedDirectives) && !_configuration.TreatUnknownObjectAsScalar;
-                var isComplex = isList || treatUnknownObjectAsComplex || IsComplexType(fieldType.Kind);
+                var isComplex = isList || treatUnknownObjectAsComplex || IsComplexType(fieldType.Kind) || field.Args?.Any() == true;
 
                 writer.Write(fieldMetadataIndentation);
                 writer.Write("        new GraphQlFieldMetadata { Name = \"");
