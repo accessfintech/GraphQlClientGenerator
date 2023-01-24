@@ -975,7 +975,7 @@ using Newtonsoft.Json.Linq;
                 GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, member.Type, member.Name),
                 GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, member.Type, member.Name),
                 GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, member.Type, member.Name),
-                GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, member.Type, member.Name, member.AppliedDirectives),
+                GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, member.Type, member.Name, member.AppliedDirectives),
                 _ => GetCustomScalarNetType(baseType, member.Type, member.Name)
             };
 
@@ -1007,9 +1007,19 @@ using Newtonsoft.Json.Linq;
             _ => throw new InvalidOperationException($"'{_configuration.IntegerTypeMapping}' not supported")
         };
 
-    private ScalarFieldTypeDescription GetIdNetTypeWrapper(GraphQlType baseType, GraphQlFieldType memberType, string memberName, ICollection<AppliedDirective> memberAppliedDirectives)
+    private ScalarFieldTypeDescription GetIdNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName, ICollection<AppliedDirective> appliedDirectives) =>
+        _configuration.IdTypeMapping switch
+        {
+            IdTypeMapping.String => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string")),
+            IdTypeMapping.Guid => ConvertToTypeDescription("Guid?"),
+            IdTypeMapping.Object => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("object")),
+            IdTypeMapping.Custom => GetIdNetTypeWrapper(appliedDirectives),
+            _ => throw new InvalidOperationException($"'{_configuration.IdTypeMapping}' not supported")
+        };
+
+    private ScalarFieldTypeDescription GetIdNetTypeWrapper(IEnumerable<AppliedDirective> appliedDirectives)
     {
-        var clrDirectiveValue = GetClrDirectiveValue(memberAppliedDirectives);
+        var clrDirectiveValue = GetClrDirectiveValue(appliedDirectives);
         var description = ConvertToTypeDescription(clrDirectiveValue ?? "dynamic");
 
         return description;
@@ -1020,16 +1030,6 @@ using Newtonsoft.Json.Linq;
         var clrDirective = directives?.SingleOrDefault(d => d.Name == "clrType");
         return clrDirective?.Args.FirstOrDefault(a => a.Name == "type")?.Value.Trim('"');
     }
-
-    private ScalarFieldTypeDescription GetIdNetType(GraphQlType baseType, GraphQlTypeBase valueType, string valueName) =>
-        _configuration.IdTypeMapping switch
-        {
-            IdTypeMapping.String => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("string")),
-            IdTypeMapping.Guid => ConvertToTypeDescription("Guid?"),
-            IdTypeMapping.Object => ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled("object")),
-            IdTypeMapping.Custom => _configuration.ScalarFieldTypeMappingProvider.GetCustomScalarFieldType(_configuration, baseType, valueType, valueName),
-            _ => throw new InvalidOperationException($"'{_configuration.IdTypeMapping}' not supported")
-        };
 
     private static InvalidOperationException ListItemTypeResolutionFailedException(string typeName, string fieldName) =>
         FieldTypeResolutionFailedException(typeName, fieldName, "list item type was not resolved; nested collections too deep");
@@ -1822,7 +1822,7 @@ using Newtonsoft.Json.Linq;
             GraphQlTypeBase.GraphQlTypeScalarString => GetCustomScalarNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarFloat => GetFloatNetType(baseType, valueType, valueName),
             GraphQlTypeBase.GraphQlTypeScalarBoolean => GetBooleanNetType(baseType, valueType, valueName),
-            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetTypeWrapper(baseType, valueType, valueName, appliedDirectives),
+            GraphQlTypeBase.GraphQlTypeScalarId => GetIdNetType(baseType, valueType, valueName, appliedDirectives),
             _ => GetCustomScalarNetType(baseType, valueType, valueName)
         };
 
