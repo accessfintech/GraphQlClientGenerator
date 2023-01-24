@@ -957,8 +957,7 @@ using Newtonsoft.Json.Linq;
                     netItemType = AddQuestionMarkIfNullableReferencesEnabled(netItemType);
 
                 var netCollectionType = String.Format(netCollectionOpenType, netItemType);
-                return new ScalarFieldTypeDescription { NetTypeName = netCollectionType };
-            //return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType), baseType.Kind);
+                return ConvertToTypeDescription(AddQuestionMarkIfNullableReferencesEnabled(netCollectionType));
 
             case GraphQlTypeKind.Scalar:
                 return GetScalarNetType(fieldType.Name, baseType, member);
