@@ -1139,8 +1139,6 @@ using Newtonsoft.Json.Linq;
             writer.WriteLine();
         }
 
-
-
         GraphQlDirectiveLocation directiveLocation;
         if (type.Name == schema.QueryType?.Name)
             directiveLocation = GraphQlDirectiveLocation.Query;
