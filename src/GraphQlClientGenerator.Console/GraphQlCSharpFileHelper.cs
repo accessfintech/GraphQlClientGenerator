@@ -39,7 +39,7 @@ internal static class GraphQlCSharpFileHelper
             if (!KeyValueParameterParser.TryGetCustomHeaders(options.Header, out var headers, out var headerParsingErrorMessage))
                 throw new InvalidOperationException(headerParsingErrorMessage);
 
-            schema = await GraphQlGenerator.RetrieveSchema(new HttpMethod(options.HttpMethod), options.ServiceUrl, headers);
+            schema = await GraphQlGenerator.RetrieveSchema(new HttpMethod(options.HttpMethod), options.ServiceUrl, options.IncludeAppliedDirectives, headers);
             console.Out.WriteLine($"GraphQL Schema retrieved from {options.ServiceUrl}. ");
         }
             
@@ -53,8 +53,11 @@ internal static class GraphQlCSharpFileHelper
                 MemberAccessibility = options.MemberAccessibility,
                 IdTypeMapping = options.IdTypeMapping,
                 FloatTypeMapping = options.FloatTypeMapping,
+                BooleanTypeMapping = options.BooleanTypeMapping,
+                IntegerTypeMapping = options.IntegerTypeMapping,
                 JsonPropertyGeneration = options.JsonPropertyAttribute,
-                EnumValueNaming = options.EnumValueNaming
+                EnumValueNaming = options.EnumValueNaming,
+                IncludeDeprecatedFields = options.IncludeDeprecatedFields
             };
 
         if (!KeyValueParameterParser.TryGetCustomClassMapping(options.ClassMapping, out var customMapping, out var customMappingParsingErrorMessage))
