@@ -720,7 +720,7 @@ using Newtonsoft.Json.Linq;
 
         var indentation = GetIndentation(context.Indentation);
 
-        if (graphQlType.Interfaces?.Count > 0)
+        if (graphQlType.Interfaces?.Count > 0 || _implementingTypeToUnions.ContainsKey(graphQlType.Name))
         {
             writer.Write(indentation);
             writer.Write("[GraphQlObjectType(\"");
@@ -866,7 +866,8 @@ using Newtonsoft.Json.Linq;
         }
 
         var fieldType = member.Type.UnwrapIfNonNull();
-        var isGraphQlInterfaceJsonConverterRequired = fieldType.Kind == GraphQlTypeKind.Interface || fieldType.Kind == GraphQlTypeKind.List && UnwrapListItemType(fieldType, out _).UnwrapIfNonNull().Kind == GraphQlTypeKind.Interface;
+        var isGraphQlInterfaceJsonConverterRequired = fieldType.Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union ||
+                                                      fieldType.Kind == GraphQlTypeKind.List && (UnwrapListItemType(fieldType, out _).UnwrapIfNonNull().Kind is GraphQlTypeKind.Interface or GraphQlTypeKind.Union);
         var isBaseTypeInputObject = baseType.Kind == GraphQlTypeKind.InputObject;
         var isPreprocessorDirectiveDisableNewtonsoftJsonRequired = !isInterfaceMember && decorateWithJsonPropertyAttribute || isGraphQlInterfaceJsonConverterRequired || isBaseTypeInputObject;
         if (isPreprocessorDirectiveDisableNewtonsoftJsonRequired)
